@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "359624070923",
+    "project_id": "smatpay-87c59",
+    "storage_bucket": "smatpay-87c59.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:359624070923:android:45e44424133652fb07340e",
+        "android_client_info": {
+          "package_name": "com.example.smatpay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "359624070923-rlmomlln13g4q5e4ldcnt58q66trt8ij.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smatpay",
+            "certificate_hash": "a25abd06937284e2c2387a6b1b24b55aef6c91fa"
+          }
+        },
+        {
+          "client_id": "359624070923-5a0bi30go8n74r9cfdfqncbaf82bpth1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRIuZlsWbrA15Nhpd0DUeqtKSxhljs-j4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "359624070923-5a0bi30go8n74r9cfdfqncbaf82bpth1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "359624070923-94826mshldl8qq1bgpo37dkr3ufqfl4r.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smatpay"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
