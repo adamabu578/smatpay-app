@@ -1,0 +1,13 @@
+flutter_native_splash:
+  color: "#FFFFFF"
+  color_dark: "#1A123B"
+  image: assets/smatpay_images/icons/smatpayLogowhite.png
+  image_dark: assets/smatpay_images/icons/smatpaylogoblack.png
+
+  android_12:
+    color: "#FFFFFF"
+    color_dark: "#1A123B"
+    image: assets/smatpay_images/icons/smatpayLogowhite.png
+    image_dark: assets/smatpay_images/icons/smatpaylogoblack.png
+
+  web: false
