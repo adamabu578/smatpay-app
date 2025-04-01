@@ -8,6 +8,7 @@ import 'app.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'features/authentication/controllers/profile/profile_controller.dart';
 import 'features/authentication/controllers/signup/signup_controllerr.dart';
+import 'features/smatpay/brands/transaction/transaction_controller.dart';
 import 'firebase_options.dart';
 
 /// ---- Entry point of Flutter App
@@ -17,6 +18,7 @@ Future<void> main() async {
       WidgetsFlutterBinding.ensureInitialized();
   Get.lazyPut(() => SignupController());
   Get.put(ProfileController());
+  Get.put(TransactionController());
 
   // Init Local Storage
   await GetStorage.init();
