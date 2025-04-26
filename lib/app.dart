@@ -5,7 +5,10 @@ import 'package:smatpay/features/authentication/screens/login/login.dart';
 import 'package:smatpay/utils/constants/colors.dart';
 import 'package:smatpay/utils/theme/theme.dart';
 
-import 'features/smatpay/home/screen/home.dart';
+import 'data/repositories/authentication/authentication_repository.dart';
+import 'features/authentication/controllers/login/login_controller.dart';
+import 'features/authentication/controllers/profile/profile_controller.dart';
+import 'navigation_menu.dart';
 
 /// ---- Use this class to setup themes, initial Bindings any animations and much more
 
@@ -20,27 +23,40 @@ class App extends StatelessWidget {
       theme: TAppTheme.lightTheme,
       darkTheme: TAppTheme.darkTheme,
       initialBinding: GeneralBindings(),
-
-      getPages: [
-        GetPage(name: '/login', page: () => const TLoginScreen()),  // Define login route
-        GetPage(name: '/home', page: () => const TsmatpayHomeScreen()),    // Define home route
-      ],
-      /// Show Loader or Circular Progress Indicator meanwhile Authentication Repository is deciding to show relevant screen.
-
-      home:
-          //const TOnBoardingScreen(),
-          const Scaffold(
-        backgroundColor: TColors.primary2,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Colors.white,
-          ),
-        ),
+      home: FutureBuilder(
+        future: _checkAuthStatus(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              backgroundColor: TColors.primary2,
+              body: Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            );
+          }
+          return snapshot.data ?? const TLoginScreen();
+        },
       ),
-      //  const TOnBoardingScreen(),
-
-      /// Display the Remote Config version check screen on startup
-      // home: const TRemoteConfig(),
     );
+  }
+
+  Future<Widget?> _checkAuthStatus() async {
+    try {
+      final loginController = Get.put(TLoginController());
+      final token = await loginController.getToken();
+
+      if (token != null && token.isNotEmpty) {
+        final authRepo = Get.find<TAuthenticationRepository>();
+        final isValid = await authRepo.verifyToken(token);
+        if (isValid) {
+          await Get.find<ProfileController>().loadUserProfile();
+          return const TNavigationMenu();
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Auth check error: $e");
+      return null;
+    }
   }
 }

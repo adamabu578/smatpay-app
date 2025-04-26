@@ -76,8 +76,7 @@ class TReAuthLoginForm extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                        onPressed: () =>
-                            controller.reAuthenticateEmailAndPasswordUser(),
+                        onPressed: () {},
                         style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.all(TSizes.md),
                             backgroundColor: TColors.primary,

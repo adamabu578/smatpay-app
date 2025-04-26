@@ -11,6 +11,8 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:smatpay/utils/helpers/helper_functions.dart';
 
+import '../../../virtual_account/screens/create_virtual_account.dart';
+
 class TPersonalInformationScreen extends StatelessWidget {
   const TPersonalInformationScreen({super.key});
 
@@ -40,7 +42,7 @@ class TPersonalInformationScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
                 width: double.infinity,
-                height: 300,
+                height: 400,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   color: dark ? TColors.primary2 : TColors.white,
@@ -85,21 +87,10 @@ class TPersonalInformationScreen extends StatelessWidget {
                           ),
                         ),
                         child:
-                            // TextButton(
-                            //   onPressed: () =>
-                            //       controller.uploadUserProfilePicture(),
-                            //   child:
-                            //   Text(
-                            //     'Change Photo',
-                            //     style: Theme.of(context)
-                            //         .textTheme
-                            //         .bodySmall!
-                            //         .apply(color: TColors.primary),
-                            //   ),
-                            // ),
 
                             GestureDetector(
-                          onTap: () => controller.uploadUserProfilePicture(),
+                          onTap: () {},
+                          // => controller.uploadUserProfilePicture(),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -135,7 +126,21 @@ class TPersonalInformationScreen extends StatelessWidget {
                           Iconsax.arrow_right_3,
                           color: dark ? TColors.primary : TColors.primary,
                         ),
-                        onTap: () => Get.to(() => const TEditProfileScreen()),
+                        onTap: () {},
+                      ),
+
+                      // Add this below the Edit Profile tile in your existing code
+                      TSettingsMenuTile2(
+                        icon: const Icon(
+                          Iconsax.bank,
+                          color: TColors.primary,
+                        ),
+                        title: 'Create Virtual Account',
+                        trailing: Icon(
+                          Iconsax.arrow_right_3,
+                          color: dark ? TColors.primary : TColors.primary,
+                        ),
+                        onTap: () => Get.to(() => const CreateVirtualAccountScreen()),
                       ),
                     ],
                   ),
@@ -146,18 +151,13 @@ class TPersonalInformationScreen extends StatelessWidget {
               height: 300,
             ),
             GestureDetector(
-              onTap: () => controller.deleteAccountWarningPopup(),
+              onTap: () {},
+              // => controller.deleteAccountWarningPopup(),
               //() => Get.to(() => const TLoginScreen()),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Icon(
-                  //   Iconsax.logout,
-                  //   color: dark ? TColors.white : TColors.primary,
-                  // ),
-                  // SizedBox(
-                  //   width: 6,
-                  // ),
+
                   Text(
                     'Close Account',
                     style: TextStyle(

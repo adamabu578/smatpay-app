@@ -14,11 +14,12 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchProfile();
+    loadUserProfile(); // Changed from fetchProfile to loadUserProfile
   }
 
-  Future<void> fetchProfile() async {
+  Future<void> loadUserProfile() async {
     try {
+      isLoading.value = true;
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('auth_token');
 
@@ -45,7 +46,6 @@ class ProfileController extends GetxController {
           fullName.value = '${data['data']['firstName']} ${data['data']['lastName']}';
           email.value = data['data']['email'];
           firstName.value = data['data']['firstName'];
-
         } else {
           print("❌ Profile fetch failed: ${data['msg']}");
         }
@@ -54,6 +54,14 @@ class ProfileController extends GetxController {
       print('🚨 Error fetching profile: $e');
     } finally {
       isLoading.value = false;
+      print("✅ Profile loading completed");
     }
+  }
+
+  void clearData() {
+    fullName.value = '';
+    email.value = '';
+    firstName.value = '';
+    print("🔄 Clearing profile data...");
   }
 }

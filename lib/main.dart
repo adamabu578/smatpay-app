@@ -13,36 +13,27 @@ import 'firebase_options.dart';
 
 /// ---- Entry point of Flutter App
 Future<void> main() async {
-  // widgets Binding
-  final WidgetsBinding widgetsBinding =
-      WidgetsFlutterBinding.ensureInitialized();
-  Get.lazyPut(() => SignupController());
+  final WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize dependencies
+  await GetStorage.init();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize controllers
+  Get.put(TAuthenticationRepository());
   Get.put(ProfileController());
   Get.put(TransactionController());
 
-  // Init Local Storage
-  await GetStorage.init();
+  // Start analytics
+  TAnalyticsEngine();
 
-  //Todo: Await Native Splash
+  // Keep splash screen until auth check completes
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  //Todo: Initialize Firebase
-
-// Initialize Analytics Engine
-  TAnalyticsEngine();
-  //FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-
-// ...
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  ).then(
-    (FirebaseApp value) => Get.put(TAuthenticationRepository()),
-  );
-
-// ...
-
-  //Todo: Initialize Authentication
-
   runApp(const App());
+
+  // Remove splash screen after first frame
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    FlutterNativeSplash.remove();
+  });
 }

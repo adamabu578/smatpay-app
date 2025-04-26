@@ -111,4 +111,17 @@ class TValidator {
 
     return null;
   }
+
+  static String? validateBVN(String? value) {
+    if (value == null || value.isEmpty) return 'BVN is required';
+    if (value.length != 11) return 'BVN must be 11 digits';
+    if (!RegExp(r'^\d+$').hasMatch(value)) return 'BVN must contain only numbers';
+    return null;
+  }
+
+  static String? validateBankCode(String? value) {
+    if (value == null || value.isEmpty) return 'Bank code is required';
+    if (!RegExp(r'^\d+$').hasMatch(value)) return 'Bank code must contain only numbers';
+    return null;
+  }
 }

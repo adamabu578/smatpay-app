@@ -17,7 +17,6 @@ class TVerifyEmailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(TVerifyEmailController());
     final dark = THelperFunctions.isDarkMode(context);
     return Scaffold(
       backgroundColor: dark ? TColors.secondary : TColors.lightGrey,
@@ -26,7 +25,7 @@ class TVerifyEmailScreen extends StatelessWidget {
         actions: [
           IconButton(
               // onPressed: () => Get.offAll(() => TLoginScreen()),
-              onPressed: () => TAuthenticationRepository.instance.logout(),
+              onPressed: () {},
               icon: const Icon(CupertinoIcons.clear))
         ],
       ),
@@ -86,8 +85,7 @@ class TVerifyEmailScreen extends StatelessWidget {
                       // subTitle: TTexts.yourAccountCreatedSubTitle,
                       // onPressed: () => TLoginScreen()
                       //           )),
-                      onPressed: () =>
-                          controller.checkEmailVerificationStatus(),
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.all(TSizes.md),
                           backgroundColor: TColors.primary,
@@ -101,7 +99,7 @@ class TVerifyEmailScreen extends StatelessWidget {
                   child: TextButton(
                       // onPressed: () {},
 
-                      onPressed: () => controller.sendEmailVerification(),
+                      onPressed: () {},
                       child: const Text(TTexts.resendEmail)),
                 )
               ],

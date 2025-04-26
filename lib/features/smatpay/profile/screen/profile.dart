@@ -88,6 +88,21 @@ class TProfileScreensmatpay extends StatelessWidget {
                 if (profileController.isLoading.value) {
                   return CircularProgressIndicator();
                 }
+
+                // Add empty state check
+                if (profileController.fullName.value.isEmpty ||
+                    profileController.email.value.isEmpty) {
+                  return GestureDetector(
+                    onTap: () => profileController.loadUserProfile(),
+                    child: Text(
+                      'Tap to refresh profile',
+                      style: TextStyle(color: dark ? TColors.white : TColors.black),
+                    ),
+
+                  );
+
+                }
+
                 return Column(
                   children: [
                     Text(
@@ -160,25 +175,48 @@ class TProfileScreensmatpay extends StatelessWidget {
               const SizedBox(
                 height: 30,
               ),
-              GestureDetector(
-                onTap: () => TLoginController.instance.logoutAccountWarningPopup(),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Iconsax.logout,
-                      color: dark ? TColors.white : TColors.primary,
+
+              Obx(() {
+                final isLoading = TLoginController.instance.isLoading.value;
+                return GestureDetector(
+                  onTap: isLoading ? null : () => TLoginController.instance.logoutAccountWarningPopup(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: dark ? TColors.dark.withOpacity(0.3) : TColors.light.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: dark ? TColors.primary : TColors.black,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isLoading)
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: dark ? TColors.error : TColors.error,
+                            ),
+                          )
+                        else
+                          Icon(
+                            Iconsax.logout,
+                            color: dark ? TColors.error : TColors.error,
+                            size: 20,
+                          ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isLoading ? 'Logging out...' : 'Logout',
+                          style: TextStyle(
+                            color: dark ? TColors.error : TColors.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }),
             ],
           ),
         ),

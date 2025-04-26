@@ -3,79 +3,153 @@ import 'package:smatpay/features/smatpay/brands/transaction/transaction_model.da
 
 class TransactionCard extends StatelessWidget {
   final TransactionModel transaction;
-  final bool showFullDetails; // Changed from isCompact to showFullDetails for clarity
+  final bool showFullDetails;
 
   const TransactionCard({
     super.key,
     required this.transaction,
-    this.showFullDetails = false, // Default to false for compact view
+    this.showFullDetails = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final statusColor = transaction.status == 'delivered'
+        ? Colors.green
+        : Colors.orange;
 
     return Card(
-      margin: EdgeInsets.zero,
+      elevation: 0, // More modern flat look
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top row with service and amount
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  transaction.service,
-                  style: Theme.of(context).textTheme.titleMedium,
+                Expanded(
+                  child: Text(
+                    transaction.service,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   '₦${transaction.totalAmount.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: dark ? Colors.greenAccent : Colors.green,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.greenAccent : const Color(0xFF00A86B),
+                    fontFamily: 'RobotoMono', // Monospace for better amount alignment
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+
+            // Recipient details (if expanded)
             if (showFullDetails) ...[
-              Text(
-                'To: ${transaction.recipient}',
-                style: Theme.of(context).textTheme.bodyMedium,
+              _buildDetailRow(
+                context,
+                icon: Icons.person_outline,
+                text: transaction.recipient,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
             ],
-            Text(
-              transaction.createdAt,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey,
-              ),
+
+            // Date row
+            _buildDetailRow(
+              context,
+              icon: Icons.access_time_outlined,
+              text: transaction.createdAt,
+              secondary: true,
             ),
-            if (showFullDetails) const SizedBox(height: 8),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: transaction.status == 'delivered'
-                        ? Colors.green.withOpacity(0.2)
-                        : Colors.orange.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 12),
+
+            // Status chip
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(isDark ? 0.2 : 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: statusColor.withOpacity(0.5),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    transaction.status == 'delivered'
+                        ? Icons.check_circle_outline
+                        : Icons.pending_outlined,
+                    size: 16,
+                    color: statusColor,
                   ),
-                  child: Text(
+                  const SizedBox(width: 6),
+                  Text(
                     transaction.statusDescription,
-                    style: TextStyle(
-                      color: transaction.status == 'delivered'
-                          ? Colors.green
-                          : Colors.orange,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailRow(
+      BuildContext context, {
+        required IconData icon,
+        required String text,
+        bool secondary = false,
+      }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: secondary
+              ? isDark ? Colors.grey[400] : Colors.grey[600]
+              : isDark ? Colors.grey[300] : Colors.grey[800],
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: secondary
+                  ? isDark ? Colors.grey[400] : Colors.grey[600]
+                  : isDark ? Colors.grey[300] : Colors.grey[800],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

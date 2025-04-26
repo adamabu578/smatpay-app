@@ -4,6 +4,11 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../navigation_menu.dart';
+import '../../../../data/repositories/authentication/authentication_repository.dart';
+import '../../../smatpay/brands/transaction/transaction_controller.dart';
+import '../../../virtual_account/controllers/create_virtual_account_controller.dart';
+import '../../screens/login/login.dart';
+import '../profile/profile_controller.dart';
 
 class TLoginController extends GetxController {
   static TLoginController get instance => Get.find();
@@ -19,6 +24,18 @@ class TLoginController extends GetxController {
   void onInit() {
     super.onInit();
     _loadSavedCredentials(); // Load saved email & password if "Remember Me" was checked
+    _checkPersistedAuth();
+  }
+
+  Future<void> _checkPersistedAuth() async {
+    final token = await getToken();
+    if (token != null && token.isNotEmpty) {
+      final authRepo = Get.find<TAuthenticationRepository>();
+      final isValid = await authRepo.verifyToken(token);
+      if (isValid) {
+        Get.offAll(() => const TNavigationMenu());
+      }
+    }
   }
 
   /// API Login Function
@@ -68,6 +85,11 @@ class TLoginController extends GetxController {
         Get.snackbar('Success', 'Logged in successfully!',
             snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green, colorText: Colors.white);
 
+        if (Get.isRegistered<ProfileController>()) {
+          await Get.find<ProfileController>().loadUserProfile();
+        }
+
+
         Get.offAll(() => const TNavigationMenu()); // Navigate to main menu
       } else {
         print("❌ Login failed: ${data['msg']}");
@@ -114,15 +136,66 @@ class TLoginController extends GetxController {
     );
   }
 
+  void _clearAllControllers() {
+    try {
+      // Clear profile controller if it's initialized
+      if (Get.isRegistered<ProfileController>()) {
+        final profileController = Get.find<ProfileController>();
+        profileController.clearData(); // Implement this in ProfileController
+      }
+    } catch (e) {
+      print("⚠️ Error clearing controllers: $e");
+    }
+  }
 
   /// **Logout function**
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-    print("🚪 Logged out. Token removed.");
+    try {
+      isLoading.value = true;
 
-    // Navigate to login screen
-    Get.offAllNamed('/login');
+      // 1. Clear all cached account data
+      final accountController = AccountController();
+      await accountController.clearCache(); // Clear both memory and persistent cache
+      await TransactionController.instance.clearCache();
+      // 2. Clear user session data
+      final prefs = await SharedPreferences.getInstance();
+      await Future.wait([
+        prefs.remove('auth_token'),
+        prefs.remove('saved_email'),
+        prefs.remove('saved_password'),
+        prefs.remove('user_id'), // Add this if you track user IDs
+        prefs.setBool('remember_me', false),
+      ]);
+
+      // 3. Clear all form controllers
+      _clearAllControllers();
+      email.clear();
+      password.clear();
+      rememberMe.value = false;
+      hidePassword.value = true;
+
+      debugPrint("🚪 User logged out successfully. All data cleared.");
+
+      // 4. Navigate to login screen with complete route cleanup
+      Get.offAll(() => const TLoginScreen(),
+          predicate: (route) => false); // Remove all routes from stack
+
+      // 5. Optional: Clear any other application state
+      // Get.find<SomeOtherController>().resetState();
+
+    } catch (e) {
+      debugPrint("🚨 Error during logout: $e");
+      Get.snackbar(
+        'Error',
+        'Failed to logout completely. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   /// Save email & password when "Remember Me" is checked

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,25 +14,44 @@ class TransactionController extends GetxController {
   final hasError = false.obs;
   final currentPage = 1.obs;
   final totalPages = 1.obs;
+  String? _currentUserId;
 
   @override
   void onInit() {
-    fetchTransactions();
+    _initUserAndFetch();
     super.onInit();
   }
 
-  Future<void> fetchTransactions({int page = 1}) async {
+  Future<void> _initUserAndFetch() async {
+    final prefs = await SharedPreferences.getInstance();
+    _currentUserId = prefs.getString('user_id');
+    await fetchTransactions();
+  }
+
+  Future<void> clearCache() {
+    transactions.clear();
+    currentPage.value = 1;
+    totalPages.value = 1;
+    return Future.value();
+  }
+
+  Future<void> fetchTransactions({int page = 1, bool forceRefresh = false}) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final currentUser = prefs.getString('user_id');
+
+      // Clear cache if user changed or forced refresh
+      if (forceRefresh || _currentUserId != currentUser) {
+        await clearCache();
+        _currentUserId = currentUser;
+      }
+
       isLoading(true);
       hasError(false);
-      print('Fetching transactions for page $page...');
+      debugPrint('Fetching transactions for user $_currentUserId, page $page...');
 
-      final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
+      if (token == null) throw Exception('Authentication required');
 
       final response = await http.get(
         Uri.parse('https://api.smatpay.live/history?perPage=10&page=$page'),
@@ -38,26 +59,32 @@ class TransactionController extends GetxController {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-      );
+      ).timeout(const Duration(seconds: 30));
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      debugPrint('Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
         final List<dynamic> data = jsonResponse['data'];
-        transactions.assignAll(data.map((item) => TransactionModel.fromJson(item)).toList());
+
+        if (page == 1) {
+          transactions.assignAll(data.map((item) => TransactionModel.fromJson(item)));
+        } else {
+          transactions.addAll(data.map((item) => TransactionModel.fromJson(item)));
+        }
 
         currentPage.value = jsonResponse['metadata']['page'] ?? 1;
         totalPages.value = (jsonResponse['metadata']['total'] / jsonResponse['metadata']['perPage']).ceil();
-
-        print('Successfully loaded ${transactions.length} transactions');
       } else {
-        throw Exception('Failed to load transactions');
+        throw Exception('Failed to load transactions: ${response.statusCode}');
       }
+    } on TimeoutException {
+      hasError(true);
+      throw Exception('Request timed out');
     } catch (e) {
       hasError(true);
-      print('Error fetching transactions: $e');
+      debugPrint('Transaction fetch error: $e');
+      rethrow;
     } finally {
       isLoading(false);
     }
@@ -65,12 +92,9 @@ class TransactionController extends GetxController {
 
   Future<void> loadMoreTransactions() async {
     if (currentPage.value < totalPages.value && !isLoading.value) {
-      currentPage.value++;
-      await fetchTransactions(page: currentPage.value);
+      await fetchTransactions(page: currentPage.value + 1);
     }
   }
-  // Add this to your TransactionController class
-  TransactionModel? get latestTransaction {
-    return transactions.isNotEmpty ? transactions.first : null;
-  }
+
+  TransactionModel? get latestTransaction => transactions.isNotEmpty ? transactions.first : null;
 }

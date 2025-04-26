@@ -385,19 +385,33 @@ class TsmatpayHomeScreen extends StatelessWidget {
                       );
                     }
 
-                    if (controller.latestTransaction == null) {
+                    if (controller.transactions.isEmpty) {
                       return Column(
                         children: [
-                          Image.asset(TImages.notransaction),
-                          const Text('No transaction done yet.'),
+                          Image.asset(TImages.notransaction, width: 150, height: 150),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No transactions found',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ],
                       );
                     }
 
                     // Change this in your home screen:
-                    return TransactionCard(
-                      transaction: controller.latestTransaction!,
-                      showFullDetails: false, // Changed from isCompact to showFullDetails
+
+                    return Column(
+                      children: [
+                        TransactionCard(
+                          transaction: controller.latestTransaction!,
+                          showFullDetails: false,
+                        ),
+                        if (controller.isLoading.value && controller.transactions.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: CircularProgressIndicator(),
+                          ),
+                      ],
                     );
                   }),
                 ],

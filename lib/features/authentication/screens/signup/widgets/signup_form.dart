@@ -95,9 +95,9 @@ class TSignupForm extends StatelessWidget {
           const SizedBox(
             height: TSizes.spaceBtwInputFields,
           ),
-
+          /// Password
           Obx(
-            () => TextFormField(
+                () => TextFormField(
               controller: controller.password,
               validator: (value) => TValidator.validatePassword(value),
               obscureText: controller.hidePassword.value,
@@ -109,12 +109,158 @@ class TSignupForm extends StatelessWidget {
                   prefixIcon: const Icon(Iconsax.password_check),
                   suffixIcon: IconButton(
                     onPressed: () => controller.hidePassword.value =
-                        !controller.hidePassword.value,
+                    !controller.hidePassword.value,
                     icon: Icon(controller.hidePassword.value
                         ? Iconsax.eye_slash
                         : Iconsax.eye),
                   )),
             ),
+          ),
+
+          const SizedBox(
+            height: TSizes.spaceBtwSections,
+          ),
+
+          /// NUBAN Assignment Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section Title
+              Text(
+                'Bank Account Setup',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: dark ? TColors.light : TColors.dark,
+                ),
+              ),
+              const SizedBox(height: TSizes.spaceBtwItems),
+
+              // NUBAN Toggle
+              Container(
+                decoration: BoxDecoration(
+                  color: dark ? TColors.dark.withOpacity(0.4) : TColors.light.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(TSizes.borderRadiusMd),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TSizes.md,
+                  vertical: TSizes.sm,
+                ),
+                child: Row(
+                  children: [
+                    Obx(() => Checkbox(
+                      value: controller.assignNuban.value,
+                      onChanged: (value) => controller.assignNuban.value = value!,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    )),
+                    const SizedBox(width: TSizes.spaceBtwItems),
+                    Expanded(
+                      child: Text(
+                        'Create virtual account (NUBAN)',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: dark ? TColors.light : TColors.dark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: TSizes.spaceBtwSections),
+
+              /// BVN Information (shown only when assignNuban is true)
+              Obx(() => Visibility(
+                visible: controller.assignNuban.value,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bank Verification Details',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: dark ? TColors.light : TColors.dark,
+                      ),
+                    ),
+                    const SizedBox(height: TSizes.spaceBtwItems),
+
+                    TextFormField(
+                      controller: controller.bvn,
+                      validator: (value) => controller.assignNuban.value
+                          ? TValidator.validateEmptyText('BVN', value)
+                          : null,
+                      decoration: InputDecoration(
+                        labelText: 'BVN',
+                        hintText: 'Enter your 11-digit BVN',
+                        labelStyle: TextStyle(
+                          color: dark ? TColors.light : TColors.darkGrey,
+                        ),
+                        prefixIcon: const Icon(Iconsax.card),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: TSizes.spaceBtwInputFields),
+
+                    TextFormField(
+                      controller: controller.accountNumber,
+                      validator: (value) => controller.assignNuban.value
+                          ? TValidator.validateEmptyText('Account Number', value)
+                          : null,
+                      decoration: InputDecoration(
+                        labelText: 'Account Number',
+                        hintText: 'Your existing account number',
+                        labelStyle: TextStyle(
+                          color: dark ? TColors.light : TColors.darkGrey,
+                        ),
+                        prefixIcon: const Icon(Iconsax.card),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: TSizes.spaceBtwInputFields),
+
+                    TextFormField(
+                      controller: controller.bankCode,
+                      validator: (value) => controller.assignNuban.value
+                          ? TValidator.validateEmptyText('Bank Code', value)
+                          : null,
+                      decoration: InputDecoration(
+                        labelText: 'Bank Code',
+                        hintText: 'e.g., 076 for Zenith Bank',
+                        labelStyle: TextStyle(
+                          color: dark ? TColors.light : TColors.darkGrey,
+                        ),
+                        prefixIcon: const Icon(Iconsax.bank),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: TSizes.spaceBtwItems),
+
+                    Container(
+                      padding: const EdgeInsets.all(TSizes.sm),
+                      decoration: BoxDecoration(
+                        color: dark ? TColors.dark.withOpacity(0.2) : TColors.light.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(TSizes.borderRadiusSm),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Iconsax.info_circle,
+                            size: 16,
+                            color: dark ? TColors.light : TColors.darkGrey,
+                          ),
+                          const SizedBox(width: TSizes.sm),
+                          Expanded(
+                            child: Text(
+                              'Ensure your first and last name match your BVN records',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: dark ? TColors.light : TColors.darkGrey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: TSizes.spaceBtwSections),
+                  ],
+                ),
+              )),
+            ],
           ),
 
           const SizedBox(
@@ -132,9 +278,9 @@ class TSignupForm extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: Obx(
-              () => ElevatedButton(
+                  () => ElevatedButton(
                   onPressed:
-                      controller.isLoading.value ? null : controller.signup,
+                  controller.isLoading.value ? null : controller.signup,
                   style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.all(TSizes.md),
                       backgroundColor: TColors.primary,
@@ -143,7 +289,7 @@ class TSignupForm extends StatelessWidget {
                       )),
                   child: controller.isLoading.value
                       ? CircularProgressIndicator(
-                          color: Colors.white) // ✅ Show loader
+                      color: Colors.white) // ✅ Show loader
                       : Text(TTexts.createAccount)),
             ),
           ),
