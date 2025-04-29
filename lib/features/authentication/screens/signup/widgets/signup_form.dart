@@ -215,21 +215,47 @@ class TSignupForm extends StatelessWidget {
                     ),
                     const SizedBox(height: TSizes.spaceBtwInputFields),
 
-                    TextFormField(
-                      controller: controller.bankCode,
-                      validator: (value) => controller.assignNuban.value
-                          ? TValidator.validateEmptyText('Bank Code', value)
-                          : null,
-                      decoration: InputDecoration(
-                        labelText: 'Bank Code',
-                        hintText: 'e.g., 076 for Zenith Bank',
-                        labelStyle: TextStyle(
-                          color: dark ? TColors.light : TColors.darkGrey,
+// Replace the TextFormField for bank code with this:
+                    Obx(() {
+                      if (controller.isLoadingBanks.value) {
+                        return const CircularProgressIndicator();
+                      }
+
+                      return DropdownButtonFormField<String>(
+                        value: controller.selectedBank.value.isEmpty ? null : controller.selectedBank.value,
+                        decoration: InputDecoration(
+                          labelText: 'Bank',
+                          labelStyle: TextStyle(
+                            color: dark ? TColors.light : TColors.darkGrey,
+                          ),
+                          prefixIcon: const Icon(Iconsax.bank),
+                          isDense: true,
                         ),
-                        prefixIcon: const Icon(Iconsax.bank),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
+                        isExpanded: true, // This makes the dropdown take full width
+                        items: controller.banks.map((bank) {
+                          return DropdownMenuItem<String>(
+                            value: bank['name'] as String,
+                            child: Text(
+                              bank['name'] as String,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (String? value) {
+                          if (value != null) {
+                            controller.selectedBank.value = value;
+                            final code = controller.getBankCodeByName(value);
+                            if (code != null) {
+                              controller.bankCode.text = code;
+                            }
+                          }
+                        },
+                        validator: (value) => controller.assignNuban.value && (value == null || value.isEmpty)
+                            ? 'Please select your bank'
+                            : null,
+                      );
+                    }),
                     const SizedBox(height: TSizes.spaceBtwItems),
 
                     Container(
