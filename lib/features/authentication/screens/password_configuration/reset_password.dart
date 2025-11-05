@@ -1,102 +1,84 @@
-// import 'package:flutter/cupertino.dart';
-// import 'package:flutter/material.dart';
-// import 'package:get/get.dart';
-// import 'package:smatpay/features/authentication/controllers/forget_password/forget_password_controller.dart';
-// import 'package:smatpay/features/authentication/screens/login/login.dart';
-// import 'package:smatpay/utils/constants/colors.dart';
-// import 'package:smatpay/utils/constants/image_strings.dart';
-// import 'package:smatpay/utils/constants/sizes.dart';
-// import 'package:smatpay/utils/constants/text_strings.dart';
-// import 'package:smatpay/utils/helpers/helper_functions.dart';
-//
-// class TResetPasswordScreen extends StatelessWidget {
-//   const TResetPasswordScreen({super.key, required this.email});
-//
-//   final String email;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final dark = THelperFunctions.isDarkMode(context);
-//     return Scaffold(
-//       backgroundColor: dark ? TColors.secondary : TColors.lightGrey,
-//       appBar: AppBar(
-//         automaticallyImplyLeading: false,
-//         actions: [
-//           IconButton(
-//               onPressed: () => Get.back(),
-//               icon: const Icon(CupertinoIcons.clear))
-//         ],
-//       ),
-//       body: SingleChildScrollView(
-//         child: Padding(
-//           padding: const EdgeInsets.all(TSizes.defaultSpace),
-//           child: Column(
-//             children: [
-//               // Image
-//               Image(
-//                 image: const AssetImage(TImages.deliveredEmailIllustration),
-//                 width: THelperFunctions.screenWidth() * 0.6,
-//               ),
-//               const SizedBox(
-//                 height: TSizes.spaceBtwSections,
-//               ),
-//
-//               Text(
-//                 email,
-//                 style: Theme.of(context).textTheme.bodyMedium,
-//                 textAlign: TextAlign.center,
-//               ),
-//
-//               ///Title $ Subtitle
-//               Text(
-//                 TTexts.changeYourPasswordTitle,
-//                 style: Theme.of(context).textTheme.headlineMedium!.apply(
-//                       color: dark ? TColors.primary : TColors.primary,
-//                     ),
-//                 textAlign: TextAlign.center,
-//               ),
-//               const SizedBox(
-//                 height: TSizes.spaceBtwItems,
-//               ),
-//               Text(
-//                 TTexts.changeYourPasswordSubTitle,
-//                 style: Theme.of(context).textTheme.labelMedium!.apply(
-//                       color: dark ? TColors.white : TColors.primary,
-//                     ),
-//                 textAlign: TextAlign.center,
-//               ),
-//               const SizedBox(
-//                 height: TSizes.spaceBtwSections,
-//               ),
-//
-//               ///Buttons
-//               SizedBox(
-//                 width: double.infinity,
-//                 child: ElevatedButton(
-//                     onPressed: () => Get.offAll(() => const TLoginScreen()),
-//                     style: ElevatedButton.styleFrom(
-//                         padding: const EdgeInsets.all(TSizes.md),
-//                         backgroundColor: TColors.primary,
-//                         side: const BorderSide(
-//                           color: TColors.primary,
-//                         )),
-//                     child: const Text(TTexts.done)),
-//               ),
-//               const SizedBox(
-//                 height: TSizes.spaceBtwItems,
-//               ),
-//               SizedBox(
-//                 width: double.infinity,
-//                 child: TextButton(
-//                     //   onPressed: () {},
-//                     onPressed: () => TForgetPasswordController.instance
-//                         .resendPasswordResetEmail(email),
-//                     child: const Text(TTexts.resendEmail)),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
+// features/authentication/screens/password_configuration/reset_password.dart
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:smatpay/utils/constants/sizes.dart';
+import 'package:smatpay/utils/constants/text_strings.dart';
+
+import '../../../../utils/constants/colors.dart';
+import '../../../../utils/helpers/helper_functions.dart';
+import '../../controllers/reset_password.dart';
+
+
+class ResetPasswordScreen extends StatelessWidget {
+  const ResetPasswordScreen({super.key, required this.token});
+
+  final String token;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.put(ResetPasswordController());
+    final dark = THelperFunctions.isDarkMode(context);
+
+
+    return Scaffold(
+      backgroundColor: dark ? TColors.secondary : TColors.lightGrey,
+      appBar: AppBar(),
+      body: Padding(
+        padding: const EdgeInsets.all(TSizes.defaultSpace),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// Headings
+            Text(
+              TTexts.changeYourPasswordTitle,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: TSizes.spaceBtwItems),
+            Text(
+              TTexts.changeYourPasswordSubTitle,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+            const SizedBox(height: TSizes.spaceBtwSections * 2),
+
+            /// Password Input
+            Obx(
+                  () => TextFormField(
+                controller: controller.password,
+                obscureText: controller.hidePassword.value,
+                decoration: InputDecoration(
+                  labelText: TTexts.newPassword,
+                  labelStyle: TextStyle(
+                    color: dark ? TColors.light : TColors.darkGrey,
+                  ),
+                  prefixIcon: const Icon(Iconsax.password_check),
+                  suffixIcon: IconButton(
+                    onPressed: () => controller.hidePassword.value =
+                    !controller.hidePassword.value,
+                    icon: Icon(controller.hidePassword.value
+                        ? Iconsax.eye_slash
+                        : Iconsax.eye),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: TSizes.spaceBtwSections),
+
+            /// Submit Button
+            Obx(
+                  () => SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: controller.isLoading.value ? null : () => controller.resetPassword(token),
+                  child: controller.isLoading.value
+                      ? const CircularProgressIndicator()
+                      : const Text(TTexts.done),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -8,6 +8,7 @@ import 'package:smatpay/utils/theme/theme.dart';
 import 'data/repositories/authentication/authentication_repository.dart';
 import 'features/authentication/controllers/login/login_controller.dart';
 import 'features/authentication/controllers/profile/profile_controller.dart';
+import 'features/authentication/screens/password_configuration/reset_password_pending_screen.dart';
 import 'navigation_menu.dart';
 
 /// ---- Use this class to setup themes, initial Bindings any animations and much more
@@ -23,6 +24,12 @@ class App extends StatelessWidget {
       theme: TAppTheme.lightTheme,
       darkTheme: TAppTheme.darkTheme,
       initialBinding: GeneralBindings(),
+      getPages: [
+        // GetPage(name: '/', page: () => _getHomeScreen()),
+        GetPage(name: '/login', page: () => const TLoginScreen()),
+        GetPage(name: '/reset-pending', page: () => const ResetPasswordPendingScreen()),
+        // Add all other routes here
+      ],
       home: FutureBuilder(
         future: _checkAuthStatus(),
         builder: (context, snapshot) {

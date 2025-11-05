@@ -8,7 +8,6 @@ import 'dart:async';
 import '../screens/success_screen.dart';
 
 
-
 class CreateVirtualAccountController extends GetxController {
   static CreateVirtualAccountController get instance => Get.find();
 
@@ -16,14 +15,10 @@ class CreateVirtualAccountController extends GetxController {
   final isSuccess = false.obs;
   final accountData = <String, dynamic>{}.obs;
 
-  final bvnController = TextEditingController();
-  final accountNumberController = TextEditingController();
-  final bankCodeController = TextEditingController();
-
   Future<void> createVirtualAccount() async {
     try {
       isLoading.value = true;
-      debugPrint("⏳ Starting virtual account creation...");
+      debugPrint("⏳ Starting virtual account creation (Payscribe)...");
 
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
@@ -35,22 +30,22 @@ class CreateVirtualAccountController extends GetxController {
 
       final url = Uri.parse('https://api.smatpay.live/virtual-account');
       final body = jsonEncode({
-        "bvn": bvnController.text.trim(),
-        "accountNumber": accountNumberController.text.trim(),
-        "bankCode": bankCodeController.text.trim(),
+        "nuban_provider": "payscribe", // only Payscribe
       });
 
       debugPrint("📤 Sending request to: $url");
       debugPrint("📝 Request body: $body");
 
-      final response = await http.post(
+      final response = await http
+          .post(
         url,
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
         },
         body: body,
-      ).timeout(const Duration(seconds: 30));
+      )
+          .timeout(const Duration(seconds: 30));
 
       debugPrint("✅ Response received: ${response.statusCode}");
       debugPrint("📄 Response body: ${response.body}");
@@ -62,12 +57,7 @@ class CreateVirtualAccountController extends GetxController {
         accountData.value = data['data'] ?? {};
         isSuccess.value = true;
 
-        // Clear form fields
-        bvnController.clear();
-        accountNumberController.clear();
-        bankCodeController.clear();
-
-        // Navigate to success screen
+        // Navigate to success screen with account details
         Get.off(() => VirtualAccountSuccessScreen(
           accountData: accountData.value,
         ));
@@ -98,14 +88,6 @@ class CreateVirtualAccountController extends GetxController {
       isLoading.value = false;
       debugPrint("🔄 Virtual account creation process completed");
     }
-  }
-
-  @override
-  void onClose() {
-    bvnController.dispose();
-    accountNumberController.dispose();
-    bankCodeController.dispose();
-    super.onClose();
   }
 }
 

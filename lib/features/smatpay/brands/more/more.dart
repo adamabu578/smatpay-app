@@ -191,7 +191,7 @@ class TMoreScreen extends StatelessWidget {
                   //   width: 10,
                   // ),
                   GestureDetector(
-                    onTap: () => Get.to(() => const TElectricityScreen()),
+                    onTap: () => Get.to(() => const ElectricityPurchaseScreen()),
                     child: Container(
                       height: 110,
                       width: 110,

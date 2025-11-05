@@ -1,24 +1,32 @@
-// features/authentication/controllers/forgot_password/forgot_password_controller.dart
+// features/authentication/controllers/forgot_password/reset_password_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import '../../screens/password_configuration/reset_password_pending_screen.dart';
+import '../screens/password_configuration/reset_password_success_screen.dart';
 
-class ForgotPasswordController extends GetxController {
-  static ForgotPasswordController get instance => Get.find();
+
+class ResetPasswordController extends GetxController {
+  static ResetPasswordController get instance => Get.find();
 
   /// Variables
-  final email = TextEditingController();
-  final forgotPasswordFormKey = GlobalKey<FormState>();
+  final password = TextEditingController();
+  final hidePassword = true.obs;
   final isLoading = false.obs;
 
-  /// Send Reset Password Email
-  Future<void> sendPasswordResetEmail() async {
+  /// Reset Password
+  Future<void> resetPassword(String token) async {
     try {
-      // Validate Form
-      if (!forgotPasswordFormKey.currentState!.validate()) {
+      // Validate Password
+      if (password.text.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'Please enter your new password',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
         return;
       }
 
@@ -31,9 +39,10 @@ class ForgotPasswordController extends GetxController {
 
       // API Call
       final response = await http.post(
-        Uri.parse('https://api.smatpay.live/forgot-password'),
+        Uri.parse('https://api.smatpay.live/reset-password'),
         body: {
-          'email': email.text.trim(),
+          'password': password.text.trim(),
+          'token': token,
         },
       );
 
@@ -45,23 +54,23 @@ class ForgotPasswordController extends GetxController {
       if (response.statusCode == 200) {
         Get.snackbar(
           'Success',
-          data['msg'] ?? 'Password reset link sent to your email',
+          data['msg'] ?? 'Password reset successfully',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
-        Get.to(() => const ResetPasswordPendingScreen());
+        Get.offAll(() => const PasswordResetSuccessScreen());
       } else {
         Get.snackbar(
           'Error',
-          data['msg'] ?? 'Failed to send reset link',
+          data['msg'] ?? 'Failed to reset password',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (e) {
-      print("Forgot Password Error: $e");
+      print("Reset Password Error: $e");
       Get.snackbar(
         'Error',
         'Something went wrong. Please try again.',
@@ -76,7 +85,7 @@ class ForgotPasswordController extends GetxController {
 
   @override
   void onClose() {
-    email.dispose();
+    password.dispose();
     super.onClose();
   }
 }

@@ -6,22 +6,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ProfileController extends GetxController {
   static ProfileController get instance => Get.find();
 
+  // --- Profile Data ---
   var fullName = ''.obs;
   var email = ''.obs;
-  var isLoading = true.obs;
   var firstName = ''.obs;
+
+  // --- Payscribe Account Data ---
+  var accountNumber = ''.obs;
+  var accountName = ''.obs;
+  var bankName = ''.obs;
+
+  // --- Loading State ---
+  var isLoading = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    loadUserProfile(); // Changed from fetchProfile to loadUserProfile
+    loadUserProfile(); // Load both profile & payscribe account automatically
   }
 
+  /// Fetch user profile and payscribe account from the same API
   Future<void> loadUserProfile() async {
     try {
       isLoading.value = true;
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('auth_token');
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
 
       print("🔑 Retrieved Token for Profile: $token");
 
@@ -43,12 +53,33 @@ class ProfileController extends GetxController {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
-          fullName.value = '${data['data']['firstName']} ${data['data']['lastName']}';
-          email.value = data['data']['email'];
-          firstName.value = data['data']['firstName'];
+          final userData = data['data'];
+          final accounts = userData['virtualAccounts'] as List? ?? [];
+
+          // --- Profile Info ---
+          fullName.value = '${userData['firstName']} ${userData['lastName']}';
+          email.value = userData['email'];
+          firstName.value = userData['firstName'];
+
+          // --- Payscribe Account ---
+          final payscribeAccount = accounts.firstWhere(
+                (acc) => acc['provider'] == 'payscribe',
+            orElse: () => null,
+          );
+
+          if (payscribeAccount != null) {
+            accountNumber.value = payscribeAccount['accountNumber'] ?? '';
+            accountName.value = payscribeAccount['accountName'] ?? '';
+            bankName.value = payscribeAccount['bankName'] ?? '';
+            print("🏦 Payscribe Account Found: ${payscribeAccount['accountNumber']}");
+          } else {
+            print("⚠️ No Payscribe account found.");
+          }
         } else {
           print("❌ Profile fetch failed: ${data['msg']}");
         }
+      } else {
+        print("❌ Server Error: ${response.statusCode}");
       }
     } catch (e) {
       print('🚨 Error fetching profile: $e');
@@ -58,10 +89,14 @@ class ProfileController extends GetxController {
     }
   }
 
+  /// Clear stored user and account data
   void clearData() {
     fullName.value = '';
     email.value = '';
     firstName.value = '';
-    print("🔄 Clearing profile data...");
+    accountNumber.value = '';
+    accountName.value = '';
+    bankName.value = '';
+    print("🔄 Clearing all profile and account data...");
   }
 }

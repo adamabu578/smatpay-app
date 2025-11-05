@@ -8,7 +8,6 @@ import 'package:smatpay/common/widgets/shimmers/shimmer.dart';
 import 'package:smatpay/common/widgets/texts/section_heading.dart';
 import 'package:smatpay/features/personalization/controllers/user_controller.dart';
 import 'package:smatpay/features/smatpay/brands/airtime/screen/buyairtime.dart';
-import 'package:smatpay/features/smatpay/brands/data_sme/screen/success_page.dart';
 import 'package:smatpay/features/smatpay/brands/data_sme/screen/testing_sme.dart';
 import 'package:smatpay/features/smatpay/profile/screen/notifications.dart';
 import 'package:smatpay/features/virtual_account/screens/account_screen.dart';
@@ -18,15 +17,71 @@ import 'package:smatpay/utils/constants/image_strings.dart';
 import 'package:smatpay/utils/helpers/helper_functions.dart';
 
 import '../../../authentication/controllers/profile/profile_controller.dart';
+import '../../brands/electricity/electricity.dart';
 import '../../brands/transaction/transaction_card.dart';
 import '../../brands/transaction/transaction_controller.dart';
 import '../../brands/transaction/transaction_screen.dart';
 import '../../controllers/wallet_controller.dart';
 
-class TsmatpayHomeScreen extends StatelessWidget {
-  const TsmatpayHomeScreen({
-    super.key,
-  });
+class TsmatpayHomeScreen extends StatefulWidget {
+  const TsmatpayHomeScreen({super.key});
+
+  @override
+  State<TsmatpayHomeScreen> createState() => _TsmatpayHomeScreenState();
+}
+
+class _TsmatpayHomeScreenState extends State<TsmatpayHomeScreen> {
+  final GlobalKey<RefreshIndicatorState> _refreshKey =
+  GlobalKey<RefreshIndicatorState>();
+
+  /// Handles pull-to-refresh
+  Future<void> _handleRefresh() async {
+    try {
+      final walletController = Get.find<WalletController>();
+      final transactionController = Get.find<TransactionController>();
+      final profileController = Get.find<ProfileController>();
+
+      await Future.wait([
+        walletController.fetchWalletBalance(),
+        transactionController.fetchTransactions(forceRefresh: true),
+        profileController.loadUserProfile(),
+      ]);
+
+      if (_refreshKey.currentState?.mounted ?? false) {
+        Get.rawSnackbar(
+          message: 'Data refreshed successfully',
+          backgroundColor: Colors.green,
+        );
+      }
+    } catch (e) {
+      Get.rawSnackbar(
+        message: 'Refresh failed: $e',
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // // Trigger auto-refresh on first build
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _refreshKey.currentState?.show();
+    // });
+    /// Silent refresh (no spinner)
+    Future.microtask(() async {
+      final walletController = Get.find<WalletController>();
+      final transactionController = Get.find<TransactionController>();
+      final profileController = Get.find<ProfileController>();
+
+      await Future.wait([
+        walletController.fetchWalletBalance(),
+        transactionController.fetchTransactions(forceRefresh: true),
+        profileController.loadUserProfile(),
+      ]);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,319 +160,342 @@ class TsmatpayHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: dark ? TColors.primary : TColors.primary,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: 200,
-                      child: Image.asset(
-                        TImages.cardvector,
-                        width: 150,
-                        height: 150,
-                        color: const Color.fromARGB(255, 110, 110, 249),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(18.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Wallet Balance',
-                                style: Theme.of(context).textTheme.bodyMedium!.apply(color: TColors.white),
-                              ),
-                              const SizedBox(width: 5),
-                              Obx(() => IconButton(
-                                icon: Icon(
-                                  walletController.showBalance.value ? Iconsax.eye : Iconsax.eye_slash,
-                                  color: TColors.white,
-                                ),
-                                onPressed: walletController.toggleBalanceVisibility,
-                              )),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Obx(() {
-                            if (walletController.isLoading.value) {
-                              return const TShimmerEffect(width: 100, height: 20);
-                            }
-                            return Text(
-                              walletController.showBalance.value
-                                  ? '₦${walletController.balance.value.toStringAsFixed(2)}'
-                                  : '****',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall!
-                                  .copyWith(color: TColors.white, fontFamily: 'Roboto', fontWeight: FontWeight.bold),
-                            );
-                          }),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              GestureDetector(
-                                onTap: () => Get.to(() => TAccountScreen()),
-                                child: Container(
-                                  height: 40,
-                                  width: 140,
-                                  decoration: BoxDecoration(
-                                    color: TColors.white,
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Image.asset(
-                                              TImages.cardreceive,
-                                              color: TColors.primary,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Fund Wallet',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium!
-                                                  .apply(color: TColors.primary),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => Get.to(() => TWalletBalanceScreen()),
-                                child: Container(
-                                  height: 40,
-                                  width: 140,
-                                  decoration: BoxDecoration(
-                                    color: TColors.white,
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Image.asset(
-                                              TImages.send,
-                                              color: TColors.primary,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Withdraw',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium!
-                                                  .apply(color: TColors.primary),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              )
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 30),
-              child: TSectionHeading(
-                title: 'Quick Links',
-                showActionButton: false,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Get.to(() => TAccountScreen()),
-                      child: const Column(
-                        children: [
-                          TCircularContainer(
-                            width: 70,
-                            height: 70,
-                            backgroundColor: TColors.secondary2,
-                            child: Icon(
-                              Icons.account_balance,
-                              color: TColors.primary,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text('Account')
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    GestureDetector(
-                      onTap: () => Get.to(() => const TBuyAirtimeScreen()),
-                      child: const Column(
-                        children: [
-                          TCircularContainer(
-                            width: 70,
-                            height: 70,
-                            backgroundColor: TColors.secondary2,
-                            child: Icon(
-                              Icons.phone_in_talk_sharp,
-                              color: TColors.primary,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text('Airtime')
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    GestureDetector(
-                      onTap: () => Get.to(() => TTestingSmeDataScreen()),
-                      child: const Column(
-                        children: [
-                          TCircularContainer(
-                            width: 70,
-                            height: 70,
-                            backgroundColor: TColors.secondary2,
-                            child: Icon(
-                              Icons.wifi_outlined,
-                              color: TColors.primary,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text('Data')
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    GestureDetector(
-                      onTap: () => Get.to(() => TSuccessPage(
-                          message: 'Data purchased successfully! Amount: NGN ₦120')),
-                      child: const Column(
-                        children: [
-                          TCircularContainer(
-                            width: 70,
-                            height: 70,
-                            backgroundColor: TColors.secondary2,
-                            child: Icon(
-                              Icons.lightbulb,
-                              color: TColors.primary,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text('Electricity')
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-// Replace the transaction section in your build method with this:
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+      /// Pull-to-Refresh Wrapper
+      body: RefreshIndicator(
+        key: _refreshKey,
+        onRefresh: _handleRefresh,
+        color: TColors.primary,
+        backgroundColor: TColors.white,
+        displacement: 40.0,
+        strokeWidth: 2.5,
+        triggerMode: RefreshIndicatorTriggerMode.anywhere,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // --- Wallet Card ---
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: TColors.primary,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Stack(
                     children: [
-                      const TSectionHeading(
-                        title: 'Recent Transaction',
-                        showActionButton: false,
+                      Positioned(
+                        left: 200,
+                        child: Image.asset(
+                          TImages.cardvector,
+                          width: 150,
+                          height: 150,
+                          color: const Color.fromARGB(255, 110, 110, 249),
+                        ),
                       ),
-                      TextButton(
-                        onPressed: () => Get.to(() => const FullTransactionScreen()),
-                        child: const Text('View All'),
+                      Padding(
+                        padding: const EdgeInsets.all(18.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Wallet Balance',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium!
+                                      .apply(color: TColors.white),
+                                ),
+                                const SizedBox(width: 5),
+                                Obx(() => IconButton(
+                                  icon: Icon(
+                                    walletController.showBalance.value
+                                        ? Iconsax.eye
+                                        : Iconsax.eye_slash,
+                                    color: TColors.white,
+                                  ),
+                                  onPressed: walletController
+                                      .toggleBalanceVisibility,
+                                )),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Obx(() {
+                              if (walletController.isLoading.value) {
+                                return const TShimmerEffect(
+                                    width: 100, height: 20);
+                              }
+                              return Text(
+                                walletController.showBalance.value
+                                    ? '₦${walletController.balance.value.toStringAsFixed(2)}'
+                                    : '****',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall!
+                                    .copyWith(
+                                    color: TColors.white,
+                                    fontFamily: 'Roboto',
+                                    fontWeight: FontWeight.bold),
+                              );
+                            }),
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                GestureDetector(
+                                  onTap: () => Get.to(() => TAccountScreen()),
+                                  child: Container(
+                                    height: 40,
+                                    width: 140,
+                                    decoration: BoxDecoration(
+                                      color: TColors.white,
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Row(
+                                        children: [
+                                          Image.asset(
+                                            TImages.cardreceive,
+                                            color: TColors.primary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Fund Wallet',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium!
+                                                .apply(color: TColors.primary),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () =>
+                                      Get.to(() => TWalletBalanceScreen()),
+                                  child: Container(
+                                    height: 40,
+                                    width: 140,
+                                    decoration: BoxDecoration(
+                                      color: TColors.white,
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Row(
+                                        children: [
+                                          Image.asset(
+                                            TImages.send,
+                                            color: TColors.primary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Withdraw',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium!
+                                                .apply(color: TColors.primary),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              ],
+                            )
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Obx(() {
-                    final controller = TransactionController.instance;
-
-                    if (controller.isLoading.value) {
-                      return const TShimmerEffect(width: double.infinity, height: 100);
-                    }
-
-                    if (controller.hasError.value) {
-                      return Column(
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 50),
-                          Text('Failed to load transactions',
-                              style: Theme.of(context).textTheme.bodyMedium),
-                          ElevatedButton(
-                            onPressed: controller.fetchTransactions,
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      );
-                    }
-
-                    if (controller.transactions.isEmpty) {
-                      return Column(
-                        children: [
-                          Image.asset(TImages.notransaction, width: 150, height: 150),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No transactions found',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      );
-                    }
-
-                    // Change this in your home screen:
-
-                    return Column(
-                      children: [
-                        TransactionCard(
-                          transaction: controller.latestTransaction!,
-                          showFullDetails: false,
-                        ),
-                        if (controller.isLoading.value && controller.transactions.isNotEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: CircularProgressIndicator(),
-                          ),
-                      ],
-                    );
-                  }),
-                ],
+                ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 10),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 30),
+                child: TSectionHeading(
+                  title: 'Quick Links',
+                  showActionButton: false,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // --- Quick Links ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Get.to(() => TAccountScreen()),
+                        child: const Column(
+                          children: [
+                            TCircularContainer(
+                              width: 70,
+                              height: 70,
+                              backgroundColor: TColors.secondary2,
+                              child: Icon(
+                                Icons.account_balance,
+                                color: TColors.primary,
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Text('Account')
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      GestureDetector(
+                        onTap: () => Get.to(() => const TBuyAirtimeScreen()),
+                        child: const Column(
+                          children: [
+                            TCircularContainer(
+                              width: 70,
+                              height: 70,
+                              backgroundColor: TColors.secondary2,
+                              child: Icon(
+                                Icons.phone_in_talk_sharp,
+                                color: TColors.primary,
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Text('Airtime')
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      GestureDetector(
+                        onTap: () => Get.to(() => TTestingSmeDataScreen()),
+                        child: const Column(
+                          children: [
+                            TCircularContainer(
+                              width: 70,
+                              height: 70,
+                              backgroundColor: TColors.secondary2,
+                              child: Icon(
+                                Icons.wifi_outlined,
+                                color: TColors.primary,
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Text('Data')
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      GestureDetector(
+                        onTap: () =>
+                            Get.to(() => const ElectricityPurchaseScreen()),
+                        child: const Column(
+                          children: [
+                            TCircularContainer(
+                              width: 70,
+                              height: 70,
+                              backgroundColor: TColors.secondary2,
+                              child: Icon(
+                                Icons.lightbulb,
+                                color: TColors.primary,
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Text('Electricity')
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- Transaction Section ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const TSectionHeading(
+                          title: 'Recent Transaction',
+                          showActionButton: false,
+                        ),
+                        TextButton(
+                          onPressed: () => Get.to(
+                                  () => const FullTransactionScreen()),
+                          child: const Text('View All'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Obx(() {
+                      final controller = TransactionController.instance;
+
+                      if (controller.isLoading.value) {
+                        return const TShimmerEffect(
+                            width: double.infinity, height: 100);
+                      }
+
+                      if (controller.hasError.value) {
+                        return Column(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Colors.red, size: 50),
+                            Text('Failed to load transactions',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                            ElevatedButton(
+                              onPressed: controller.fetchTransactions,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        );
+                      }
+
+                      if (controller.transactions.isEmpty) {
+                        return Column(
+                          children: [
+                            Image.asset(TImages.notransaction,
+                                width: 150, height: 150),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No transactions found',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          TransactionCard(
+                            transaction: controller.latestTransaction!,
+                            showFullDetails: false,
+                          ),
+                          if (controller.isLoading.value &&
+                              controller.transactions.isNotEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: CircularProgressIndicator(),
+                            ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

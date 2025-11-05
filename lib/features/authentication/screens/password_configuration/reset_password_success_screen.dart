@@ -1,21 +1,16 @@
+// features/authentication/screens/password_configuration/password_reset_success.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:smatpay/utils/constants/colors.dart';
-import 'package:smatpay/utils/constants/image_strings.dart';
 import 'package:smatpay/utils/constants/sizes.dart';
+import 'package:smatpay/utils/constants/text_strings.dart';
+import 'package:smatpay/utils/helpers/helper_functions.dart';
 
-import '../../../home/screen/home.dart';
+import '../../../../utils/constants/colors.dart';
+import '../login/login.dart';
 
-class TSuccessPage extends StatelessWidget {
-  final String transactionId;
-  final String message;
-
-  const TSuccessPage({
-    super.key,
-    required this.transactionId,
-    required this.message,
-  });
+class PasswordResetSuccessScreen extends StatelessWidget {
+  const PasswordResetSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,28 +20,34 @@ class TSuccessPage extends StatelessWidget {
           padding: const EdgeInsets.all(TSizes.defaultSpace),
           child: Column(
             children: [
-              const SizedBox(height: TSizes.appBarHeight),
-              Image.asset(
-                TImages.successfulPaymentIcon,
-                width: 150,
+              /// Image
+              Icon(
+                Iconsax.verify,
+                size: THelperFunctions.screenWidth() * 0.5,
+                color: TColors.primary,
               ),
               const SizedBox(height: TSizes.spaceBtwSections),
+
+              /// Title & Subtitle
               Text(
-                message,
+                TTexts.changeYourPasswordTitle,
                 style: Theme.of(context).textTheme.headlineMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: TSizes.spaceBtwItems),
               Text(
-                'Transaction ID: $transactionId',
-                style: Theme.of(context).textTheme.labelLarge,
+                TTexts.yourAccountCreatedSubTitle,
+                style: Theme.of(context).textTheme.labelMedium,
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: TSizes.spaceBtwSections),
+
+              /// Buttons
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Get.offAll(() => TsmatpayHomeScreen()),
-                  child: const Text('Done'),
+                  onPressed: () => Get.offAll(() => const TLoginScreen()),
+                  child: const Text(TTexts.done),
                 ),
               ),
             ],

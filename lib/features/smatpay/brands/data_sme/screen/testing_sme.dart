@@ -5,7 +5,6 @@ import 'package:smatpay/utils/constants/colors.dart';
 import 'package:smatpay/utils/constants/image_strings.dart';
 import 'package:smatpay/utils/helpers/helper_functions.dart';
 
-import '../../../../../common/widgets/appbar/appbar.dart';
 import '../../data/controller/data_controller.dart';
 import '../../data_ePin/screen/success_page.dart';
 
@@ -16,21 +15,20 @@ class TTestingSmeDataScreen extends StatefulWidget {
 
 class _TTestingSmeDataScreenState extends State<TTestingSmeDataScreen> {
   final DataBundleController bundleController = Get.put(DataBundleController());
-  final DataPurchaseController purchaseController = Get.put(DataPurchaseController());
+  final DataPurchaseController purchaseController =
+      Get.put(DataPurchaseController());
   final phoneController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     bundleController.fetchDataBundles();
-
-    // Listen to purchase status changes
     ever(purchaseController.transactionStatus, (status) {
       if (status == 'success') {
         Get.offAll(() => TSuccessPage(
-          transactionId: purchaseController.transactionId.value!,
-          message: 'Data purchase successful!',
-        ));
+              transactionId: purchaseController.transactionId.value!,
+              message: 'Data purchase successful!',
+            ));
       }
     });
   }
@@ -46,99 +44,73 @@ class _TTestingSmeDataScreenState extends State<TTestingSmeDataScreen> {
     final dark = THelperFunctions.isDarkMode(context);
     return Scaffold(
       backgroundColor: dark ? TColors.secondary : TColors.softGrey,
-      appBar: const TAppBar(
+      appBar: AppBar(
         title: Text('Buy Data'),
-        showBackArrow: true,
-        actions: [Icon(Iconsax.message_question)],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Get.back(),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Iconsax.message_question),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 20),
               Container(
                 width: double.infinity,
-                height: 480,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   color: dark ? TColors.primary2 : TColors.white,
                   border: Border.all(color: TColors.grey, width: 1),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Select Network'),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildNetworkButton('mtn', TImages.mtn, 'MTN'),
-                          _buildNetworkButton('glo', TImages.glo, 'GLO'),
-                          _buildNetworkButton('airtel', TImages.airtel, 'AIRTEL'),
-                        ],
-                      ),
-                      SizedBox(height: 25),
-
-                      Text('Select Data Bundle'),
-                      SizedBox(height: 20),
-                      Obx(() => _buildBundleDropdown()),
-
-                      SizedBox(height: 20),
-
-                      Text('Amount'),
-                      SizedBox(height: 10),
-                      Obx(() {
-                        final amount = bundleController.selectedBundle.value != null
-                            ? bundleController.selectedBundle.value!['variation_amount']
-                            : '0';
-
-                        return RichText(
-                          text: TextSpan(
-                            style: Theme.of(context).textTheme.headlineSmall,
-                            children: [
-                              TextSpan(
-                                text: '₦ ',
-                                style: TextStyle(
-                                  fontFamily: 'Roboto',
-                                  // Keep other styles from headlineSmall
-                                  fontSize: Theme.of(context).textTheme.headlineSmall?.fontSize,
-                                  fontWeight: Theme.of(context).textTheme.headlineSmall?.fontWeight,
-                                  color: Theme.of(context).textTheme.headlineSmall?.color,
-                                ),
-                              ),
-                              TextSpan(
-                                text: amount,
-                                // Use the original style for the amount
-                                style: Theme.of(context).textTheme.headlineSmall,
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-
-                      SizedBox(height: 20),
-
-                      Text('Phone Number'),
-                      SizedBox(height: 10),
-                      TextField(
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          hintText: 'Enter phone number',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.phone),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Select Network',
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    SizedBox(height: 12),
+                    _buildNetworkSelector(),
+                    SizedBox(height: 20),
+                    Text('Select Data Bundle',
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    SizedBox(height: 12),
+                    _buildBundleSelector(),
+                    SizedBox(height: 20),
+                    Text('Amount',
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    SizedBox(height: 12),
+                    _buildAmountDisplay(),
+                    SizedBox(height: 20),
+                    Text('Phone Number',
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    SizedBox(height: 12),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        hintText: 'Enter phone number',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        prefixIcon: Icon(Icons.phone),
+                        contentPadding:
+                            EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 24),
               _buildPurchaseButton(),
-              Obx(() => _buildStatusMessage()),
+              _buildStatusMessage(),
             ],
           ),
         ),
@@ -146,111 +118,272 @@ class _TTestingSmeDataScreenState extends State<TTestingSmeDataScreen> {
     );
   }
 
-  Widget _buildBundleDropdown() {
-    if (bundleController.isLoading.value) {
-      return Center(child: CircularProgressIndicator());
-    }
-
-    if (bundleController.dataBundles.isEmpty) {
-      return Text(
-        'No bundles available for ${bundleController.selectedNetwork.value}',
-        style: TextStyle(color: Colors.grey),
-      );
-    }
-
-    return DropdownButton<Map<String, dynamic>>(
-      value: bundleController.selectedBundle.value,
-      isExpanded: true,
-      hint: Text('Select a data bundle'),
-      items: bundleController.dataBundles.map((bundle) {
-        return DropdownMenuItem(
-          value: bundle,
-          child: Text(bundle['name']),
-        );
-      }).toList(),
-      onChanged: (bundle) {
-        bundleController.selectedBundle.value = bundle;
-      },
+  Widget _buildNetworkSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildNetworkButton('mtn', TImages.mtn, 'MTN'),
+        _buildNetworkButton('glo', TImages.glo, 'GLO'),
+        _buildNetworkButton('airtel', TImages.airtel, 'AIRTEL'),
+      ],
     );
   }
 
+  Widget _buildNetworkButton(String network, String image, String label) {
+    return Obx(() => GestureDetector(
+          onTap: () => bundleController.selectNetwork(network),
+          child: Container(
+            width: 72,
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: (bundleController.selectedNetwork.value ?? '') == network
+                    ? TColors.primary
+                    : TColors.grey,
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              color: (bundleController.selectedNetwork.value ?? '') == network
+                  ? TColors.primary.withOpacity(0.1)
+                  : Colors.transparent,
+            ),
+            child: Column(
+              children: [
+                Image.asset(image, width: 36, height: 36),
+                SizedBox(height: 4),
+                Text(label, style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+        ));
+  }
+
+  Widget _buildBundleSelector() {
+    return Obx(() {
+      if (bundleController.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (bundleController.dataBundles.isEmpty) {
+        return Text(
+          'No bundles available for ${bundleController.selectedNetwork.value.toUpperCase()}',
+          style: TextStyle(color: Colors.grey),
+        );
+      }
+
+      return GestureDetector(
+        onTap: () => _showBundleDialog(context),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: TColors.grey),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  bundleController.selectedBundle.value != null
+                      ? _formatBundleName(bundleController
+                              .selectedBundle.value?['name']
+                              ?.toString() ??
+                          '')
+                      : 'Select a data bundle',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+              Icon(Icons.arrow_drop_down, color: TColors.primary),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildAmountDisplay() {
+    return Obx(() {
+      final selectedBundle = bundleController.selectedBundle.value;
+      final amount = selectedBundle != null
+          ? (selectedBundle['variation_amount']?.toString() ?? '0.00')
+          : '0.00';
+
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: TColors.darkerGrey,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Text('₦',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Roboto',
+                  color: TColors.primary,
+                )),
+            const SizedBox(width: 4),
+            Text(_formatAmount(amount),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                )),
+          ],
+        ),
+      );
+    });
+  }
+
+  /// Amount
   Widget _buildPurchaseButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Obx(() {
-        final isLoading = purchaseController.isLoading.value;
-        return ElevatedButton(
+    return Obx(() {
+      final isLoading = purchaseController.isLoading.value;
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
           onPressed: isLoading ? null : _handlePurchase,
           style: ElevatedButton.styleFrom(
-            minimumSize: Size(double.infinity, 50),
-            backgroundColor: isLoading ? Colors.grey : TColors.primary,
+            padding: EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: TColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           child: isLoading
               ? CircularProgressIndicator(color: Colors.white)
-              : Text('PROCEED TO PAYMENT'),
+              : Text('PROCEED TO PAYMENT',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      );
+    });
+  }
+
+  Widget _buildStatusMessage() {
+    return Obx(() {
+      final message = purchaseController.formattedStatus;
+      if (message != null) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            message,
+            style: TextStyle(color: Colors.red),
+          ),
         );
-      }),
-    );
+      }
+      return const SizedBox.shrink();
+    });
   }
 
   void _handlePurchase() {
-    // Validate inputs
-    if (bundleController.selectedBundle.value == null) {
+    final selectedBundle = bundleController.selectedBundle.value;
+    final selectedNetwork = bundleController.selectedNetwork.value;
+    final phone = phoneController.text.trim();
+
+    if (selectedBundle == null) {
       Get.snackbar('Error', 'Please select a data bundle');
       return;
     }
 
-    if (phoneController.text.isEmpty) {
+    if (selectedNetwork == null || selectedNetwork.isEmpty) {
+      Get.snackbar('Error', 'Please select a network');
+      return;
+    }
+
+    if (phone.isEmpty) {
       Get.snackbar('Error', 'Please enter phone number');
       return;
     }
 
-    // Proceed with purchase
+    final bundleCode = selectedBundle['variation_code']?.toString() ?? '';
+    if (bundleCode.isEmpty) {
+      Get.snackbar('Error', 'Invalid or missing bundle code');
+      return;
+    }
+
     purchaseController.purchaseData(
-      network: bundleController.selectedNetwork.value,
-      phoneNumber: phoneController.text,
-      bundleCode: bundleController.selectedBundle.value!['variation_code'],
+      network: selectedNetwork,
+      phoneNumber: phone,
+      bundleCode: bundleCode,
     );
   }
 
-  Widget _buildStatusMessage() {
-    final status = purchaseController.transactionStatus.value;
-    if (status == 'insufficient_balance') {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Text(
-          'Insufficient balance',
-          style: TextStyle(color: Colors.red),
-        ),
-      );
-    }
-    return SizedBox();
-  }
 
-  Widget _buildNetworkButton(String network, String image, String label) {
-    final dark = THelperFunctions.isDarkMode(context);
-    return GestureDetector(
-      onTap: () => bundleController.selectNetwork(network),
-      child: Obx(() => Container(
+  void _showBundleDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          border: Border.all(
-            color: bundleController.selectedNetwork.value == network
-                ? Colors.blue
-                : Colors.grey,
-          ),
-          borderRadius: BorderRadius.circular(8),
-          color: bundleController.selectedNetwork.value == network
-              ? Colors.blue.withOpacity(0.1)
-              : Colors.transparent,
+          color: THelperFunctions.isDarkMode(context)
+              ? TColors.darkerGrey
+              : TColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: EdgeInsets.all(8),
+        padding: EdgeInsets.all(16),
         child: Column(
           children: [
-            Image.asset(image, width: 60, height: 60),
-            Text(label),
+            Text('Select Data Bundle',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: bundleController.dataBundles.length,
+                separatorBuilder: (context, index) => Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final bundle = bundleController.dataBundles[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                    title: Text(
+                      _formatValidity(bundle['name']),
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      '₦${_formatAmount(bundle['variation_amount'])}',
+                      style: TextStyle(
+                          color: TColors.primary, fontFamily: 'Roboto'),
+                    ),
+                    onTap: () {
+                      bundleController.selectedBundle.value = bundle;
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
-      )),
+      ),
     );
   }
+
+  String _formatBundleName(String name) {
+    name = name.replaceAll('  ', ' ');
+    if (name.contains('Day')) {
+      return name.replaceAll('Day', 'Days').trim();
+    }
+    return name.trim();
+  }
+
+  String _formatValidity(String name) {
+    name = name.replaceAll('  ', ' ');
+    if (name.contains('Day')) {
+      return name.replaceAll('Day', 'Days').trim();
+    }
+    return name.trim();
+  }
+
+  String _formatAmount(dynamic amount) {
+    try {
+      if (amount == null) return '0.00'; // ✅ Prevent null crash
+      final numValue = double.parse(amount.toString());
+      return numValue
+          .toStringAsFixed(0)
+          .replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+              (Match m) => '${m[1]},');
+    } catch (e) {
+      return amount?.toString() ?? '0.00';
+    }
+  }
+
 }

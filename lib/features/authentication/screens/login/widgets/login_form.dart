@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:smatpay/features/authentication/controllers/login/login_controller.dart';
 import 'package:smatpay/features/authentication/screens/password_configuration/forgot_password.dart';
 import 'package:smatpay/features/authentication/screens/signup/signup.dart';
+import 'package:smatpay/features/smatpay/home/screen/home.dart';
 import 'package:smatpay/utils/constants/colors.dart';
 import 'package:smatpay/utils/constants/sizes.dart';
 import 'package:smatpay/utils/constants/text_strings.dart';
@@ -84,7 +85,7 @@ class TLoginForm extends StatelessWidget {
 
                 /// Forget Password
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () => Get.to(() => const ForgotPasswordScreen()),
                   child: const Text(TTexts.forgetPassword),
                 ),
               ],
@@ -99,6 +100,8 @@ class TLoginForm extends StatelessWidget {
                 : SizedBox(
               width: double.infinity,
               child: ElevatedButton(
+                // onPressed: () => Get.to(() => const TsmatpayHomeScreen()),
+
                 onPressed: () => controller.login(),
                 style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(TSizes.md),

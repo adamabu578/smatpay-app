@@ -193,7 +193,7 @@ class TServicesScreen extends StatelessWidget {
                   //   width: 10,
                   // ),
                   GestureDetector(
-                    onTap: () => Get.to(() => const TElectricityScreen()),
+                    onTap: () => Get.to(() => const ElectricityPurchaseScreen()),
                     child: Container(
                       height: 110,
                       width: 110,
@@ -221,7 +221,7 @@ class TServicesScreen extends StatelessWidget {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Get.to(() => const TCableTvScreen()),
+                    onTap: () => Get.to(() =>  TCableTvScreen()),
                     child: Container(
                       height: 110,
                       width: 110,

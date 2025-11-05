@@ -3,15 +3,15 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:smatpay/analytics/analytics_engine.dart';
-import 'package:smatpay/data/repositories/authentication/authentication_repository.dart';
+import 'package:smatpay/features/authentication/controllers/profile/profile_controller.dart';
 import 'app.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'features/authentication/controllers/profile/profile_controller.dart';
-import 'features/authentication/controllers/signup/signup_controllerr.dart';
+import 'data/repositories/authentication/authentication_repository.dart';
+import 'features/authentication/controllers/forget_password/forget_password_controller.dart';
+
 import 'features/smatpay/brands/transaction/transaction_controller.dart';
 import 'firebase_options.dart';
 
-/// ---- Entry point of Flutter App
 Future<void> main() async {
   final WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
@@ -19,10 +19,13 @@ Future<void> main() async {
   await GetStorage.init();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize controllers
+  // Initialize controllers that need early initialization
   Get.put(TAuthenticationRepository());
-  Get.put(ProfileController());
+
+  Get.put(ForgotPasswordController());
   Get.put(TransactionController());
+  Get.put(ProfileController());
+
 
   // Start analytics
   TAnalyticsEngine();

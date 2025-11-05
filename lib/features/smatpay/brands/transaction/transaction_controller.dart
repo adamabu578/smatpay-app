@@ -17,6 +17,7 @@ class TransactionController extends GetxController {
   String? _currentUserId;
 
   @override
+
   void onInit() {
     _initUserAndFetch();
     super.onInit();

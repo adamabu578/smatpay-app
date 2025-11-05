@@ -244,8 +244,7 @@ class _TAccountScreenState extends State<TAccountScreen> {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: // In your AccountScreen's "Create Account" button:
-            ElevatedButton(
+            child: ElevatedButton(
               onPressed: () async {
                 final result = await Get.to<bool>(() => const CreateVirtualAccountScreen());
                 if (result == true) {
@@ -253,31 +252,46 @@ class _TAccountScreenState extends State<TAccountScreen> {
                 }
               },
               child: const Text('Create Virtual Account'),
-            )
+            ),
           ),
         ],
       );
     }
 
+    // ✅ Find the Payscribe account (if it exists)
+    final payscribeAccount = virtualAccounts.firstWhere(
+          (acc) => acc['provider'] == 'payscribe',
+      orElse: () => null,
+    );
+
+    final selectedAccount = payscribeAccount ?? virtualAccounts.first;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          virtualAccounts[0]['accountNumber']?.toString() ?? 'Not available',
+          selectedAccount['accountNumber']?.toString() ?? 'Not available',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
-        if (virtualAccounts[0]['accountName'] != null)
+        if (selectedAccount['accountName'] != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              virtualAccounts[0]['accountName'],
+              selectedAccount['accountName'],
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).hintColor,
               ),
             ),
           ),
+        const SizedBox(height: 8),
+        Text(
+          selectedAccount['bankName'] ?? '',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).hintColor,
+          ),
+        ),
       ],
     );
   }
@@ -308,26 +322,44 @@ class _TAccountScreenState extends State<TAccountScreen> {
     final virtualAccounts = _profileData?['virtualAccounts'] as List?;
     final hasAccount = virtualAccounts != null && virtualAccounts.isNotEmpty;
 
+    // ✅ Find the Payscribe account
+    final payscribeAccount = hasAccount
+        ? virtualAccounts.firstWhere(
+          (acc) => acc['provider'] == 'payscribe',
+      orElse: () => null,
+    )
+        : null;
+
+    // ✅ If no Payscribe account, fallback to the first one
+    final selectedAccount = payscribeAccount ?? (hasAccount ? virtualAccounts.first : null);
+
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: hasAccount ? () {
+            onPressed: selectedAccount != null
+                ? () {
               Clipboard.setData(ClipboardData(
-                  text: virtualAccounts[0]['accountNumber']));
+                  text: selectedAccount['accountNumber'] ?? ''));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Copied to clipboard')),
               );
-            } : null,
+            }
+                : null,
             child: const Text("Copy Number"),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: ElevatedButton(
-            onPressed: hasAccount ? () {
-              // Implement share functionality here
-            } : null,
+            onPressed: selectedAccount != null
+                ? () {
+              // Implement share functionality here if needed
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Share feature coming soon!')),
+              );
+            }
+                : null,
             child: const Text("Share Details"),
           ),
         ),

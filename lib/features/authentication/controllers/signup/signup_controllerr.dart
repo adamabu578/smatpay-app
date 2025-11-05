@@ -17,92 +17,13 @@ class SignupController extends GetxController {
   final phoneNo = TextEditingController();
   final password = TextEditingController();
   final hidePassword = true.obs;
-  final bvn = TextEditingController();
-  final accountNumber = TextEditingController();
-  final bankCode = TextEditingController();
+
+  // NUBAN toggle
   final assignNuban = false.obs;
   final privacyPolicy = false.obs;
 
-  // Loading States
+  // Loading State
   final isLoading = false.obs;
-  final isLoadingBanks = false.obs;
-
-  // Bank Selection
-  final selectedBank = RxString('');
-  final banks = <Map<String, dynamic>>[].obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-    fetchBanks();
-  }
-
-  /// Fetches list of banks from API
-  Future<void> fetchBanks() async {
-    try {
-      isLoadingBanks.value = true;
-      final response = await http.get(
-        Uri.parse('https://api.smatpay.live/banks'),
-        headers: {'Accept': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
-          banks.value = List<Map<String, dynamic>>.from(data['data']);
-        } else {
-          throw Exception(data['msg'] ?? 'Failed to load banks');
-        }
-      } else {
-        throw Exception('Failed to load banks: ${response.statusCode}');
-      }
-    } catch (e) {
-      print("Error fetching banks: $e");
-      Get.snackbar(
-        'Error',
-        'Failed to load bank list. Please try again later.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoadingBanks.value = false;
-    }
-  }
-
-  /// Gets bank code by bank name
-  String? getBankCodeByName(String bankName) {
-    try {
-      final bank = banks.firstWhere(
-            (bank) => bank['name'] == bankName,
-        orElse: () => {},
-      );
-      return bank['code']?.toString();
-    } catch (e) {
-      print("Error getting bank code: $e");
-      return null;
-    }
-  }
-
-  /// Handles bank selection change
-  void onBankSelected(String? bankName) {
-    if (bankName != null) {
-      selectedBank.value = bankName;
-      final code = getBankCodeByName(bankName);
-      if (code != null) {
-        bankCode.text = code;
-      } else {
-        bankCode.clear();
-        Get.snackbar(
-          'Error',
-          'Could not determine bank code for selected bank',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      }
-    }
-  }
 
   /// Signup Function
   Future<void> signup() async {
@@ -123,18 +44,6 @@ class SignupController extends GetxController {
       return;
     }
 
-    // Validate bank selection if NUBAN is enabled
-    if (assignNuban.value && (selectedBank.value.isEmpty || bankCode.text.isEmpty)) {
-      Get.snackbar(
-        'Error',
-        'Please select your bank',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
     final url = Uri.parse('https://api.smatpay.live/signup');
     final requestBody = {
       "firstName": firstName.text.trim(),
@@ -142,15 +51,13 @@ class SignupController extends GetxController {
       "email": email.text.trim(),
       "phone": phoneNo.text.trim(),
       "password": password.text.trim(),
-      "assignNuban": assignNuban.value ? "yes" : "no",
+      "assignNuban": assignNuban.value,
     };
 
-    // Add BVN-related fields if assigning NUBAN
+    // If user wants NUBAN, specify Payscribe provider (optional, defaults to payscribe)
     if (assignNuban.value) {
       requestBody.addAll({
-        "bvn": bvn.text.trim(),
-        "accountNumber": accountNumber.text.trim(),
-        "bankCode": bankCode.text.trim(),
+        "nubanProvider": "payscribe",
       });
     }
 
@@ -173,7 +80,6 @@ class SignupController extends GetxController {
 
       final data = jsonDecode(response.body);
 
-      // In your SignupController's signup method:
       if (response.statusCode == 200) {
         Get.snackbar(
           'Success',
@@ -190,8 +96,7 @@ class SignupController extends GetxController {
             Get.offAll(() => TLoginScreen());
           },
         ));
-      }
-       else {
+      } else {
         Get.snackbar(
           'Error',
           data['message'] ?? 'Signup failed',
@@ -221,9 +126,6 @@ class SignupController extends GetxController {
     email.dispose();
     phoneNo.dispose();
     password.dispose();
-    bvn.dispose();
-    accountNumber.dispose();
-    bankCode.dispose();
     super.onClose();
   }
 }

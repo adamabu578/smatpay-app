@@ -149,4 +149,23 @@ class DataPurchaseController extends GetxController {
       print('🏁 Purchase process completed');
     }
   }
+  void resetTransaction() {
+    transactionStatus.value = null;
+    transactionId.value = null;
+  }
+
+// Add this to handle different status cases more clearly
+  String? get formattedStatus {
+    switch (transactionStatus.value) {
+      case 'success':
+        return null; // No message needed as we navigate away
+      case 'insufficient_balance':
+        return 'Insufficient balance. Please fund your wallet.';
+      case 'failed':
+      case 'error':
+        return 'Transaction failed. Please try again.';
+      default:
+        return null;
+    }
+  }
 }
