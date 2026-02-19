@@ -219,7 +219,7 @@ class TMoreScreen extends StatelessWidget {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Get.to(() => const TCableTvScreen()),
+                    onTap: () => Get.to(() => TCableTvScreen()),
                     child: Container(
                       height: 110,
                       width: 110,

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../utils/constants/api_constants.dart';
 import '../models/cable_plan_model.dart';
 import '../models/verify_smartcard_model.dart';
 
@@ -71,7 +72,7 @@ class CableTvController extends GetxController {
       }
 
       final response = await http.post(
-        Uri.parse("https://api.smatpay.live/tv/verify-smart-card"),
+        Uri.parse(APIConstants.cableTvVerifyEndpoint),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -124,7 +125,7 @@ class CableTvController extends GetxController {
       }
 
       final response = await http.get(
-        Uri.parse("https://api.smatpay.live/tv/plans?provider=${selectedProvider.value}"),
+        Uri.parse("${APIConstants.cableTvPlansEndpoint}?provider=${selectedProvider.value}"),
         headers: {'Authorization': 'Bearer $token'},
       ).timeout(const Duration(seconds: 30));
 

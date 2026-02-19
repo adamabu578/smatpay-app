@@ -2,6 +2,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import '../../../../utils/constants/api_constants.dart';
 
 
 
@@ -21,7 +22,7 @@ class TAuthenticationRepository extends GetxController {
   Future<bool> verifyToken(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('https://api.smatpay.live/verify-token'),
+        Uri.parse(APIConstants.verifyTokenEndpoint),
         headers: {'Authorization': 'Bearer $token'},
       );
       return response.statusCode == 200;

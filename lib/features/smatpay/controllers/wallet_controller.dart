@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
+import '../../../utils/constants/api_constants.dart';
+
 class WalletController extends GetxController {
   var balance = 0.0.obs;
   var isLoading = true.obs;
@@ -29,7 +31,7 @@ class WalletController extends GetxController {
       print("📤 Fetching wallet balance with token: $token");
 
       final response = await http.get(
-        Uri.parse('https://api.smatpay.live/balance'),
+        Uri.parse(APIConstants.balanceEndpoint),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../../utils/constants/api_constants.dart';
 import '../../screens/login/login.dart';
 import '../../screens/signup/signup_success_screen.dart';
 
@@ -27,12 +28,8 @@ class SignupController extends GetxController {
 
   /// Signup Function
   Future<void> signup() async {
-    // Validate form
-    if (!signupFormKey.currentState!.validate()) {
-      return;
-    }
+    if (!signupFormKey.currentState!.validate()) return;
 
-    // Check privacy policy
     if (!privacyPolicy.value) {
       Get.snackbar(
         'Error',
@@ -44,39 +41,105 @@ class SignupController extends GetxController {
       return;
     }
 
-    final url = Uri.parse('https://api.smatpay.live/signup');
-    final requestBody = {
-      "firstName": firstName.text.trim(),
-      "lastName": lastName.text.trim(),
-      "email": email.text.trim(),
-      "phone": phoneNo.text.trim(),
-      "password": password.text.trim(),
-      "assignNuban": assignNuban.value,
-    };
-
-    // If user wants NUBAN, specify Payscribe provider (optional, defaults to payscribe)
-    if (assignNuban.value) {
-      requestBody.addAll({
-        "nubanProvider": "payscribe",
-      });
-    }
+    isLoading.value = true;
 
     try {
-      isLoading.value = true;
-      Get.snackbar(
-        'Processing',
-        'Please wait...',
-        snackPosition: SnackPosition.BOTTOM,
+      Map<String, dynamic> virtualAccountData = {};
+
+      // 🔹 Step 1: Create Virtual Account (if user checked the box)
+      if (assignNuban.value) {
+        Get.dialog(
+          const Center(
+            child: CircularProgressIndicator(),
+          ),
+          barrierDismissible: false,
+        );
+
+        print("Creating virtual account with Payscribe...");
+
+        final nubanUrl = Uri.parse(APIConstants.virtualAccountEndpoint);
+        final nubanBody = jsonEncode({
+          "nuban_provider": "payscribe",
+        });
+
+        final nubanResponse = await http.post(
+          nubanUrl,
+          headers: {"Content-Type": "application/json"},
+          body: nubanBody,
+        );
+
+        // Close loading dialog
+        Get.back();
+
+        print("Virtual Account Response: ${nubanResponse.statusCode}");
+        print("Virtual Account Body: ${nubanResponse.body}");
+
+        if (nubanResponse.statusCode != 200) {
+          Get.snackbar(
+            'Error',
+            'Failed to create virtual account. Please try again later.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          isLoading.value = false;
+          return; // Stop signup process
+        }
+
+        final nubanData = jsonDecode(nubanResponse.body);
+
+        if (nubanData['status'] != 'success') {
+          Get.snackbar(
+            'Error',
+            nubanData['msg'] ?? 'Virtual account creation failed.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          print("Virtual Account Error: $nubanData");
+          isLoading.value = false;
+          return; // Stop signup process
+        }
+
+        // ✅ Save returned virtual account data
+        virtualAccountData = nubanData['data'] ?? {};
+
+        print("Virtual account created successfully: $virtualAccountData");
+      }
+
+      // 🔹 Step 2: Proceed with Signup
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(),
+        ),
+        barrierDismissible: false,
       );
 
+      final signupUrl = Uri.parse(APIConstants.signupEndpoint);
+      final requestBody = {
+        "firstName": firstName.text.trim(),
+        "lastName": lastName.text.trim(),
+        "email": email.text.trim(),
+        "phone": phoneNo.text.trim(),
+        "password": password.text.trim(),
+        "assignNuban": assignNuban.value,
+        if (assignNuban.value) "nubanProvider": "payscribe",
+        if (assignNuban.value) "virtualAccount": virtualAccountData,
+      };
+
+      print("Signup Request Body: $requestBody");
+
       final response = await http.post(
-        url,
+        signupUrl,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(requestBody),
       );
 
-      print("Response Status: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      // Close loading dialog
+      Get.back();
+
+      print("Signup Response: ${response.statusCode}");
+      print("Signup Body: ${response.body}");
 
       final data = jsonDecode(response.body);
 
@@ -89,12 +152,8 @@ class SignupController extends GetxController {
           colorText: Colors.white,
         );
 
-        // Navigate to success screen first
         Get.offAll(() => SignupSuccessScreen(
-          onContinue: () {
-            // Then go to login after user presses continue
-            Get.offAll(() => TLoginScreen());
-          },
+          onContinue: () => Get.offAll(() => TLoginScreen()),
         ));
       } else {
         Get.snackbar(
@@ -104,9 +163,13 @@ class SignupController extends GetxController {
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
+        print("Signup Error Data: $data");
       }
     } catch (e) {
-      print("Signup Error: $e");
+      // Close any open dialog before showing error
+      if (Get.isDialogOpen ?? false) Get.back();
+
+      print("Signup Exception: $e");
       Get.snackbar(
         'Error',
         'Something went wrong. Please try again.',
@@ -118,6 +181,7 @@ class SignupController extends GetxController {
       isLoading.value = false;
     }
   }
+
 
   @override
   void onClose() {

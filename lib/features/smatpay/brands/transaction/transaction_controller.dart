@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smatpay/features/smatpay/brands/transaction/transaction_model.dart';
 
+import '../../../../utils/constants/api_constants.dart';
+
 class TransactionController extends GetxController {
   static TransactionController get instance => Get.find();
 
@@ -55,7 +57,7 @@ class TransactionController extends GetxController {
       if (token == null) throw Exception('Authentication required');
 
       final response = await http.get(
-        Uri.parse('https://api.smatpay.live/history?perPage=10&page=$page'),
+        Uri.parse('${APIConstants.historyEndpoint}?perPage=10&page=$page'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

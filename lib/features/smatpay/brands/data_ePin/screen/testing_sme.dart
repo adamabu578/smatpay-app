@@ -388,11 +388,16 @@ class _TTestingSmeDataScreenState extends State<TTestingSmeDataScreen> {
                 child: ElevatedButton(
                   //  onPressed: purchaseData,
                   onPressed: () async {
+                    print('🔘 BUTTON CLICKED (data_ePin version)!'); // Debug
                     bool success = await purchaseData();
+                    print('🔍 Purchase result: $success'); // Debug
                     if (success) {
-                      Get.to(TSuccessPage(
-                        message: 'JOY IS COMING',
+                      print('✅ Navigating to success page...'); // Debug
+                      Get.to(() => TSuccessPage(
+                        message: 'Data purchase successful!',
                       ));
+                    } else {
+                      print('❌ Purchase failed, not navigating'); // Debug
                     }
                   },
                   style: ElevatedButton.styleFrom(

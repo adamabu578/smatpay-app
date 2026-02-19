@@ -11,6 +11,7 @@ import 'package:smatpay/utils/validators/validation.dart';
 import '../../../../../common/widgets/shimmers/shimmer.dart';
 import '../../../controllers/wallet_controller.dart';
 import '../controller/airtime_controller.dart';
+import 'airtime_success_screen.dart';
 
 class TBuyAirtimeScreen extends StatefulWidget {
   const TBuyAirtimeScreen({super.key});
@@ -27,9 +28,11 @@ class _TBuyAirtimeScreenState extends State<TBuyAirtimeScreen> {
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String? selectedOperator;
+  late Worker _statusWorker; //
 
 
-    void showConfirmationBottomSheet(BuildContext context, AirtimeController controller, String operator, String phone, String amount) {
+
+  void showConfirmationBottomSheet(BuildContext context, AirtimeController controller, String operator, String phone, String amount) {
     Get.bottomSheet(
       Container(
         height: MediaQuery.of(context).size.height * 0.7, // Ensures it takes 60% of the screen height
@@ -169,6 +172,7 @@ class _TBuyAirtimeScreenState extends State<TBuyAirtimeScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
+                    print("✅ Confirm button clicked!");
                     Get.back();
                     controller.buyAirtime(operator: operator, phoneNumber: phone, amount: amount);
                   },
@@ -191,8 +195,49 @@ class _TBuyAirtimeScreenState extends State<TBuyAirtimeScreen> {
 
 
 
+  @override
+  void initState() {
+    super.initState();
+
+    // ✅ Listen for transaction status changes with better null safety
+    _statusWorker = ever(controller.transactionStatus, (status) {
+      print("🔔 Status changed to: $status"); // Debug
+
+      if (status == 'success') {
+        final txnId = controller.transactionId.value;
+        final message = controller.transactionMessage.value;
+
+        print("🔔 Transaction ID: $txnId"); // Debug
+        print("🔔 Message: $message"); // Debug
+
+        if (txnId != null && txnId.isNotEmpty) {
+          // ✅ Use Get.to() instead of Get.offAll() to preserve navigation stack
+          Get.to(
+                () => AirtimeSuccessScreen(
+              transactionId: txnId,
+              message: message.isNotEmpty ? message : 'Airtime purchase successful!',
+            ),
+          );
+          // Reset after a small delay to ensure navigation completes
+          Future.delayed(const Duration(milliseconds: 500), () {
+            controller.reset();
+          });
+        } else {
+          print("⚠️ Transaction ID is null or empty");
+        }
+      }
+    });
+  }
+
 
   @override
+  void dispose() {
+    _statusWorker.dispose(); // ✅ Clean up the worker
+    phoneController.dispose();
+    amountController.dispose();
+    super.dispose();
+  }
+
   Widget build(BuildContext context) {
     final dark = THelperFunctions.isDarkMode(context);
 

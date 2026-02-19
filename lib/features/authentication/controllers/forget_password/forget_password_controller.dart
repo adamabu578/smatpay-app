@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
+import '../../../../utils/constants/api_constants.dart';
 import '../../screens/password_configuration/reset_password_pending_screen.dart';
 
 class ForgotPasswordController extends GetxController {
@@ -31,7 +31,7 @@ class ForgotPasswordController extends GetxController {
 
       // API Call
       final response = await http.post(
-        Uri.parse('https://api.smatpay.live/forgot-password'),
+        Uri.parse(APIConstants.forgotPasswordEndpoint),
         body: {
           'email': email.text.trim(),
         },

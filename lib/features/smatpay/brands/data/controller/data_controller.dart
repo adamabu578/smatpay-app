@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../../utils/constants/api_constants.dart';
+
 class DataBundleController extends GetxController {
   final isLoading = false.obs;
   final dataBundles = <Map<String, dynamic>>[].obs;
@@ -20,36 +22,76 @@ class DataBundleController extends GetxController {
     isLoading(true);
     dataBundles.clear();
     selectedBundle.value = null;
+    selectedBundle.refresh();
 
     try {
-      final token = await _getToken();
-      if (token == null) return;
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      
+      print('🔑 Auth Token: ${token != null ? "Found (${token.length} chars)" : "NOT FOUND"}');
+      
+      if (token == null || token.isEmpty) {
+        print('❌ No auth token found in SharedPreferences');
+        Get.snackbar('Error', 'Authentication required. Please log in.');
+        return;
+      }
 
+      final url = '${APIConstants.dataBundleEndpoint}/${selectedNetwork.value}';
+      print('🔗 Fetching from: $url');
+      
       final response = await http.get(
-        Uri.parse('https://api.smatpay.live/data/bundle/${selectedNetwork.value}'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
         },
-      );
+      ).timeout(const Duration(seconds: 10));
+
+      print('📊 Status Code: ${response.statusCode}');
+      print('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          final bundles = List<Map<String, dynamic>>.from(data['data']);
-          dataBundles.assignAll(bundles);
+        try {
+          final data = json.decode(response.body);
+          print('✅ Decoded JSON: $data');
+          
+          // Check if response is a list (direct array response)
+          if (data is List) {
+            print('📋 Response is a list');
+            final bundles = List<Map<String, dynamic>>.from(data);
+            dataBundles.assignAll(bundles);
 
-          // Select first bundle if available
-          if (bundles.isNotEmpty) {
-            selectedBundle.value = bundles.first;
+            if (bundles.isNotEmpty) {
+              selectedBundle.value = Map<String, dynamic>.from(bundles.first);
+              selectedBundle.refresh();
+            }
           }
-        } else {
-          Get.snackbar('Error', data['message'] ?? 'Failed to fetch bundles');
+          // Check if response is object with 'data' field
+          else if (data is Map && data['data'] != null) {
+            print('📋 Response has data field');
+            final bundles = List<Map<String, dynamic>>.from(data['data']);
+            dataBundles.assignAll(bundles);
+
+            if (bundles.isNotEmpty) {
+              selectedBundle.value = Map<String, dynamic>.from(bundles.first);
+              selectedBundle.refresh();
+            }
+          }
+          // Check if response is directly list of bundles
+          else if (data is Map) {
+            print('⚠️ Response structure: ${data.keys.toList()}');
+            Get.snackbar('Error', 'Unexpected response format. Check logs.');
+          }
+        } catch (parseError) {
+          print('❌ JSON Parse Error: $parseError');
+          Get.snackbar('Error', 'Failed to parse response: $parseError');
         }
       } else {
-        Get.snackbar('Error', 'Failed to fetch bundles. Status: ${response.statusCode}');
+        print('❌ HTTP Error: ${response.statusCode}');
+        Get.snackbar('Error', 'Failed to fetch bundles. Status: ${response.statusCode}\n${response.body}');
       }
     } catch (e) {
+      print('❌ Exception: $e');
       Get.snackbar('Error', 'Failed to load bundles: $e');
     } finally {
       isLoading(false);
@@ -58,9 +100,13 @@ class DataBundleController extends GetxController {
 
   void selectNetwork(String network) {
     if (selectedNetwork.value == network) return;
+
     selectedNetwork.value = network;
+    selectedBundle.value = null;
+    selectedBundle.refresh(); // ✅ reset UI
     fetchDataBundles();
   }
+
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -88,12 +134,15 @@ class DataPurchaseController extends GetxController {
     required String bundleCode,
   }) async {
     try {
-      print('🚀 Starting data purchase...');
+      print('\n' + '='*60);
+      print('🚀 STARTING DATA PURCHASE');
+      print('='*60);
       print('📱 Phone: $phoneNumber');
-      print('📦 Bundle: $bundleCode');
+      print('📦 Bundle Code: $bundleCode');
       print('🌐 Network: $network');
 
-      if (network == null) {
+      if (network == null || network.isEmpty) {
+        print('❌ Error: Network not selected');
         throw Exception('Network not selected');
       }
 
@@ -101,52 +150,93 @@ class DataPurchaseController extends GetxController {
       transactionStatus.value = null;
       transactionId.value = null;
 
+      // Get token
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
-      print('🔑 Token: ${token.isNotEmpty ? "Exists" : "Missing"}');
+      print('🔑 Token: ${token.isNotEmpty ? "Found (${token.length} chars)" : "❌ MISSING"}');
 
       if (token.isEmpty) {
+        print('❌ Error: Authentication token not found');
         throw Exception('Authentication token not found');
       }
 
+      // Prepare request
+      final url = APIConstants.dataEndpoint;
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      };
+      final body = json.encode({
+        'network': network,
+        'phoneNumber': phoneNumber,
+        'bundleCode': bundleCode,
+      });
+
+      print('\n📤 REQUEST DETAILS:');
+      print('URL: $url');
+      print('Headers: $headers');
+      print('Body: $body');
+
+      // Send request
+      print('\n⏳ Sending request...');
       final response = await http.post(
-        Uri.parse('https://api.smatpay.live/data'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'network': network,
-          'phoneNumber': phoneNumber,
-          'bundleCode': bundleCode,
-        }),
-      );
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      ).timeout(const Duration(seconds: 30));
 
-      print('📊 Response Status: ${response.statusCode}');
-      print('📦 Response Body: ${response.body}');
+      print('\n📥 RESPONSE RECEIVED:');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
 
-      final responseData = json.decode(response.body);
+      // Parse response
+      try {
+        final responseData = json.decode(response.body);
+        print('✅ Response parsed successfully');
+        print('Response data: $responseData');
 
-      if (response.statusCode == 200) {
-        transactionStatus.value = 'success';
-        transactionId.value = responseData['data']['transactionId'];
-        print('✅ Purchase successful!');
-      } else if (response.statusCode == 402) {
-        transactionStatus.value = 'insufficient_balance';
-        print('❌ Insufficient balance');
-      } else {
-        transactionStatus.value = 'failed';
-        transactionId.value = responseData['data']?['transactionId'];
-        print('❌ Purchase failed');
+        if (response.statusCode == 200) {
+          final status = responseData['status'] ?? '';
+          print('\n✅ SUCCESS! Status: $status');
+          
+          transactionStatus.value = 'success';
+          transactionId.value = responseData['data']?['transactionId'] ?? '';
+          
+          print('💰 Transaction ID: ${transactionId.value}');
+          Get.snackbar(
+            'Success',
+            'Transaction successful!\nID: ${transactionId.value}',
+            duration: const Duration(seconds: 4),
+          );
+        } else if (response.statusCode == 402) {
+          print('\n⚠️ Insufficient balance');
+          transactionStatus.value = 'insufficient_balance';
+          Get.snackbar('Error', 'Insufficient balance. Please fund your wallet.');
+        } else {
+          print('\n❌ Transaction failed with status ${response.statusCode}');
+          transactionStatus.value = 'failed';
+          transactionId.value = responseData['data']?['transactionId'];
+          
+          final message = responseData['msg'] ?? responseData['message'] ?? 'Transaction failed';
+          Get.snackbar('Error', message);
+        }
+      } catch (parseError) {
+        print('\n❌ JSON Parse Error: $parseError');
+        transactionStatus.value = 'error';
+        Get.snackbar('Error', 'Failed to parse response: $parseError');
       }
     } catch (e) {
+      print('\n❌ EXCEPTION: $e');
+      print(e.runtimeType);
       transactionStatus.value = 'error';
-      print('‼️ Exception during purchase: $e');
       Get.snackbar('Error', 'Purchase failed: ${e.toString()}');
     } finally {
       isLoading(false);
-      print('🏁 Purchase process completed');
+      print('\n' + '='*60);
+      print('🏁 PURCHASE PROCESS COMPLETED');
+      print('Final Status: ${transactionStatus.value}');
+      print('='*60 + '\n');
     }
   }
   void resetTransaction() {

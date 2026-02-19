@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../navigation_menu.dart';
 import '../../../../data/repositories/authentication/authentication_repository.dart';
+import '../../../../utils/constants/api_constants.dart';
 import '../../../smatpay/brands/transaction/transaction_controller.dart';
 import '../../../virtual_account/controllers/create_virtual_account_controller.dart';
 import '../../screens/login/login.dart';
@@ -48,7 +49,7 @@ class TLoginController extends GetxController {
     isLoading.value = true;
     print("⏳ Logging in...");
 
-    final url = Uri.parse('https://api.smatpay.live/login');
+    final url = Uri.parse(APIConstants.loginEndpoint);
     final body = jsonEncode({
       "email": email.text.trim(),
       "password": password.text.trim(),

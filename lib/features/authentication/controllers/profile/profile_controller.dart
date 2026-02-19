@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../utils/constants/api_constants.dart';
+
 class ProfileController extends GetxController {
   static ProfileController get instance => Get.find();
 
@@ -41,7 +43,7 @@ class ProfileController extends GetxController {
       }
 
       final response = await http.get(
-        Uri.parse('https://api.smatpay.live/profile'),
+        Uri.parse(APIConstants.profileEndpoint),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

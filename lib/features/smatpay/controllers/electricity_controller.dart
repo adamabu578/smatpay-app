@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../utils/constants/api_constants.dart';
 import '../brands/electricity/success_page.dart';
 
 class ElectricityController extends GetxController {
@@ -40,7 +41,7 @@ class ElectricityController extends GetxController {
       }
 
       final response = await http.post(
-        Uri.parse('https://api.smatpay.live/electricity/recipient/verify'),
+        Uri.parse(APIConstants.electricityVerifyEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -105,7 +106,7 @@ class ElectricityController extends GetxController {
       final userPhone = prefs.getString('phone') ?? '';
 
       final response = await http.post(
-        Uri.parse('https://api.smatpay.live/electricity/electricity/purchase'),
+        Uri.parse(APIConstants.electricityPurchaseEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

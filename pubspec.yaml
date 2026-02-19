@@ -70,7 +70,9 @@ dependencies:
   package_info_plus: ^8.0.2
   shared_preferences: ^2.5.2
   firebase_dynamic_links: ^5.5.7
-  uni_links: ^0.5.1
+  app_links: ^3.4.5
+dependency_overrides:
+  app_links: ^3.4.5
 
 dev_dependencies:
   flutter_test:

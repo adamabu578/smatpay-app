@@ -5,94 +5,99 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
+import '../../../utils/constants/api_constants.dart';
 import '../screens/success_screen.dart';
 
 
-class CreateVirtualAccountController extends GetxController {
-  static CreateVirtualAccountController get instance => Get.find();
+  class CreateVirtualAccountController extends GetxController {
+    static CreateVirtualAccountController get instance => Get.find();
 
-  final isLoading = false.obs;
-  final isSuccess = false.obs;
-  final accountData = <String, dynamic>{}.obs;
+    final isLoading = false.obs;
+    final isSuccess = false.obs;
+    final accountData = <String, dynamic>{}.obs;
 
-  Future<void> createVirtualAccount() async {
-    try {
-      isLoading.value = true;
-      debugPrint("⏳ Starting virtual account creation (Payscribe)...");
+    Future<void> createVirtualAccount() async {
+      try {
+        isLoading.value = true;
+        print("⏳ Starting virtual account creation (Payscribe)...");
 
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('auth_token');
 
-      if (token == null) {
-        debugPrint("❌ No authentication token found");
-        throw Exception("Authentication token not found");
+        if (token == null) {
+          print("❌ No authentication token found");
+          throw Exception("Authentication token not found");
+        }
+
+        final url = Uri.parse(APIConstants.virtualAccountEndpoint);
+        final body = jsonEncode({
+          "nuban_provider": "payscribe", // only Payscribe
+        });
+
+        print("📤 Sending request to: $url");
+        print("📝 Request body: $body");
+
+
+        final response = await http
+            .post(
+          url,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+          body: body,
+        )
+            .timeout(const Duration(seconds: 30));
+
+        print("✅ Response received: ${response.statusCode}");
+        print("📄 Response body: ${response.body}");
+        print("🔐 Authorization: Bearer ${token.substring(0, 8)}...");
+        print("🔍 Full response: ${response.body}");
+
+        final data = jsonDecode(response.body);
+
+        if (response.statusCode == 200 && data['status'] == 'success') {
+          print("🎉 Virtual account created successfully!");
+          accountData.value = data['data'] ?? {};
+          isSuccess.value = true;
+
+          // Navigate to success screen with account details
+          Get.off(() => VirtualAccountSuccessScreen(
+            accountData: accountData.value,
+          ));
+        } else {
+          print("❌ Failed to create virtual account: ${data['msg']}");
+          throw Exception(data['msg'] ?? 'Failed to create virtual account');
+        }
+      } on TimeoutException {
+        print("⏱️ Request timed out");
+        Get.snackbar(
+          'Timeout',
+          'Request took too long. Please try again',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      } catch (e) {
+        print("🚨 Error creating virtual account: $e");
+        Get.snackbar(
+          'Error',
+          e.toString().replaceAll('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        rethrow;
+      } finally {
+        isLoading.value = false;
+        print("🔄 Virtual account creation process completed");
+
       }
-
-      final url = Uri.parse('https://api.smatpay.live/virtual-account');
-      final body = jsonEncode({
-        "nuban_provider": "payscribe", // only Payscribe
-      });
-
-      debugPrint("📤 Sending request to: $url");
-      debugPrint("📝 Request body: $body");
-
-      final response = await http
-          .post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: body,
-      )
-          .timeout(const Duration(seconds: 30));
-
-      debugPrint("✅ Response received: ${response.statusCode}");
-      debugPrint("📄 Response body: ${response.body}");
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['status'] == 'success') {
-        debugPrint("🎉 Virtual account created successfully!");
-        accountData.value = data['data'] ?? {};
-        isSuccess.value = true;
-
-        // Navigate to success screen with account details
-        Get.off(() => VirtualAccountSuccessScreen(
-          accountData: accountData.value,
-        ));
-      } else {
-        debugPrint("❌ Failed to create virtual account: ${data['msg']}");
-        throw Exception(data['msg'] ?? 'Failed to create virtual account');
-      }
-    } on TimeoutException {
-      debugPrint("⏱️ Request timed out");
-      Get.snackbar(
-        'Timeout',
-        'Request took too long. Please try again',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } catch (e) {
-      debugPrint("🚨 Error creating virtual account: $e");
-      Get.snackbar(
-        'Error',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      rethrow;
-    } finally {
-      isLoading.value = false;
-      debugPrint("🔄 Virtual account creation process completed");
     }
   }
-}
 
 class AccountController {
-  static const String _profileUrl = 'https://api.smatpay.live/profile';
+  static const String _profileUrl = APIConstants.profileEndpoint;
   static const String _cacheKey = 'cached_profile_data';
   static const int _timeoutSeconds = 15;
 

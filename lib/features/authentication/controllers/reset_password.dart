@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../../../utils/constants/api_constants.dart';
 import '../screens/password_configuration/reset_password_success_screen.dart';
 
 
@@ -39,7 +40,7 @@ class ResetPasswordController extends GetxController {
 
       // API Call
       final response = await http.post(
-        Uri.parse('https://api.smatpay.live/reset-password'),
+        Uri.parse(APIConstants.resetPasswordEndpoint),
         body: {
           'password': password.text.trim(),
           'token': token,
