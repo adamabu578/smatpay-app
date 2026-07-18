@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smatpay/common/widgets/appbar/appbar.dart';
 import 'package:smatpay/features/virtual_account/screens/topup_amount.dart';
 import 'package:smatpay/utils/constants/colors.dart';
 import 'package:smatpay/utils/helpers/helper_functions.dart';
@@ -24,7 +23,6 @@ class _TAccountScreenState extends State<TAccountScreen> {
   String _errorMessage = '';
   String? _currentUserId;
 
-
   @override
   void initState() {
     super.initState();
@@ -33,10 +31,9 @@ class _TAccountScreenState extends State<TAccountScreen> {
 
   Future<void> _loadUserAndData() async {
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id'); // Assuming you store user ID
+    final userId = prefs.getString('user_id');
 
     if (userId != _currentUserId) {
-      // User changed, clear cache and reload
       await _accountController.clearCache();
       setState(() {
         _currentUserId = userId;
@@ -50,7 +47,6 @@ class _TAccountScreenState extends State<TAccountScreen> {
 
   Future<void> _loadInitialData() async {
     try {
-      // Force refresh if we have no cached data for current user
       final forceRefresh = _profileData == null;
       final data = await _accountController.fetchProfileDetails(forceRefresh: forceRefresh);
 
@@ -79,9 +75,7 @@ class _TAccountScreenState extends State<TAccountScreen> {
 
   Future<void> _refreshData() async {
     try {
-      // Force fresh data fetch
       final freshData = await _accountController.fetchProfileDetails(forceRefresh: true);
-
       if (mounted) {
         setState(() {
           _profileData = freshData;
@@ -102,13 +96,16 @@ class _TAccountScreenState extends State<TAccountScreen> {
     final dark = THelperFunctions.isDarkMode(context);
     return Scaffold(
       backgroundColor: dark ? TColors.secondary : TColors.softGrey,
-      appBar: TAppBar(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Add Money'),
-        showBackArrow: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshData, // Now the function is referenced
+            onPressed: _refreshData,
             tooltip: 'Refresh account data',
           ),
         ],
@@ -131,7 +128,7 @@ class _TAccountScreenState extends State<TAccountScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: dark ? TColors.darkerGrey : TColors.white,
+                color: dark ? TColors.primary2 : TColors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -160,7 +157,6 @@ class _TAccountScreenState extends State<TAccountScreen> {
 
                   const SizedBox(height: 16),
                   if (_profileData != null) _buildActionButtons(),
-
                 ],
               ),
             ),
@@ -183,15 +179,7 @@ class _TAccountScreenState extends State<TAccountScreen> {
               ),
             ),
 
-            // Other payment options
-            _buildPaymentOption(
-              context,
-              icon: Icons.money,
-              title: "Cash Deposit",
-              subtitle: "Fund your account with nearby merchants",
-            ),
-            const SizedBox(height: 16),
-
+            // Top-up with Card/Account (available)
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -206,22 +194,33 @@ class _TAccountScreenState extends State<TAccountScreen> {
                 subtitle: "Add money directly from your bank card or account",
               ),
             ),
-            const SizedBox(height: 16),
 
-            _buildPaymentOption(
-              context,
-              icon: Icons.phone_android,
-              title: "Bank USSD",
-              subtitle: "With other banks' USSD code",
-            ),
-            const SizedBox(height: 16),
+            // --- Cash Deposit (not available at the moment) ---
+            // const SizedBox(height: 16),
+            // _buildPaymentOption(
+            //   context,
+            //   icon: Icons.money,
+            //   title: "Cash Deposit",
+            //   subtitle: "Fund your account with nearby merchants",
+            // ),
 
-            _buildPaymentOption(
-              context,
-              icon: Icons.qr_code,
-              title: "Scan my QR Code",
-              subtitle: "Show QR code to any SmatPay user",
-            ),
+            // --- Bank USSD (not available at the moment) ---
+            // const SizedBox(height: 16),
+            // _buildPaymentOption(
+            //   context,
+            //   icon: Icons.phone_android,
+            //   title: "Bank USSD",
+            //   subtitle: "With other banks' USSD code",
+            // ),
+
+            // --- Scan my QR Code (not available at the moment) ---
+            // const SizedBox(height: 16),
+            // _buildPaymentOption(
+            //   context,
+            //   icon: Icons.qr_code,
+            //   title: "Scan my QR Code",
+            //   subtitle: "Show QR code to any SmatPay user",
+            // ),
           ],
         ),
       ),
@@ -248,7 +247,7 @@ class _TAccountScreenState extends State<TAccountScreen> {
               onPressed: () async {
                 final result = await Get.to<bool>(() => const CreateVirtualAccountScreen());
                 if (result == true) {
-                  await _loadInitialData(); // Refresh account data
+                  await _loadInitialData();
                 }
               },
               child: const Text('Create Virtual Account'),
@@ -258,9 +257,8 @@ class _TAccountScreenState extends State<TAccountScreen> {
       );
     }
 
-    // ✅ Find the Payscribe account (if it exists)
     final payscribeAccount = virtualAccounts.firstWhere(
-          (acc) => acc['provider'] == 'payscribe',
+      (acc) => acc['provider'] == 'payscribe',
       orElse: () => null,
     );
 
@@ -322,15 +320,13 @@ class _TAccountScreenState extends State<TAccountScreen> {
     final virtualAccounts = _profileData?['virtualAccounts'] as List?;
     final hasAccount = virtualAccounts != null && virtualAccounts.isNotEmpty;
 
-    // ✅ Find the Payscribe account
     final payscribeAccount = hasAccount
         ? virtualAccounts.firstWhere(
-          (acc) => acc['provider'] == 'payscribe',
-      orElse: () => null,
-    )
+            (acc) => acc['provider'] == 'payscribe',
+            orElse: () => null,
+          )
         : null;
 
-    // ✅ If no Payscribe account, fallback to the first one
     final selectedAccount = payscribeAccount ?? (hasAccount ? virtualAccounts.first : null);
 
     return Row(
@@ -339,12 +335,12 @@ class _TAccountScreenState extends State<TAccountScreen> {
           child: OutlinedButton(
             onPressed: selectedAccount != null
                 ? () {
-              Clipboard.setData(ClipboardData(
-                  text: selectedAccount['accountNumber'] ?? ''));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Copied to clipboard')),
-              );
-            }
+                    Clipboard.setData(ClipboardData(
+                        text: selectedAccount['accountNumber'] ?? ''));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Copied to clipboard')),
+                    );
+                  }
                 : null,
             child: const Text("Copy Number"),
           ),
@@ -354,11 +350,10 @@ class _TAccountScreenState extends State<TAccountScreen> {
           child: ElevatedButton(
             onPressed: selectedAccount != null
                 ? () {
-              // Implement share functionality here if needed
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Share feature coming soon!')),
-              );
-            }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Share feature coming soon!')),
+                    );
+                  }
                 : null,
             child: const Text("Share Details"),
           ),
@@ -368,16 +363,16 @@ class _TAccountScreenState extends State<TAccountScreen> {
   }
 
   Widget _buildPaymentOption(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required String subtitle,
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
     final dark = THelperFunctions.isDarkMode(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: dark ? TColors.darkerGrey : TColors.white,
+        color: dark ? TColors.primary2 : TColors.white,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

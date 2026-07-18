@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:smatpay/common/widgets/appbar/appbar.dart';
-import 'package:smatpay/common/widgets/custom_shapes/containers/circular_container.dart';
 import 'package:smatpay/common/widgets/images/t_circular_image.dart';
 import 'package:smatpay/common/widgets/shimmers/shimmer.dart';
-import 'package:smatpay/common/widgets/texts/section_heading.dart';
 import 'package:smatpay/features/personalization/controllers/user_controller.dart';
 import 'package:smatpay/features/smatpay/brands/airtime/screen/buyairtime.dart';
 import 'package:smatpay/features/smatpay/brands/data_sme/screen/testing_sme.dart';
@@ -30,65 +28,132 @@ class TsmatpayHomeScreen extends StatefulWidget {
   State<TsmatpayHomeScreen> createState() => _TsmatpayHomeScreenState();
 }
 
-class _TsmatpayHomeScreenState extends State<TsmatpayHomeScreen> {
+class _TsmatpayHomeScreenState extends State<TsmatpayHomeScreen>
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final GlobalKey<RefreshIndicatorState> _refreshKey =
-  GlobalKey<RefreshIndicatorState>();
+      GlobalKey<RefreshIndicatorState>();
 
-  /// Handles pull-to-refresh
-  Future<void> _handleRefresh() async {
-    try {
-      final walletController = Get.find<WalletController>();
-      final transactionController = Get.find<TransactionController>();
-      final profileController = Get.find<ProfileController>();
+  // Keep this screen alive when switching bottom nav tabs
+  @override
+  bool get wantKeepAlive => true;
 
-      await Future.wait([
-        walletController.fetchWalletBalance(),
-        transactionController.fetchTransactions(forceRefresh: true),
-        profileController.loadUserProfile(),
-      ]);
+  // Track if initial load + animation already happened
+  static bool _hasAnimated = false;
+  static bool _hasLoadedData = false;
 
-      if (_refreshKey.currentState?.mounted ?? false) {
-        Get.rawSnackbar(
-          message: 'Data refreshed successfully',
-          backgroundColor: Colors.green,
-        );
-      }
-    } catch (e) {
-      Get.rawSnackbar(
-        message: 'Refresh failed: $e',
-        backgroundColor: Colors.red,
-      );
-    }
-  }
+  // Animation controllers
+  late AnimationController _walletAnim;
+  late AnimationController _quickLinksAnim;
+  late AnimationController _transactionAnim;
+
+  late Animation<Offset> _walletSlide;
+  late Animation<double> _walletFade;
+  late Animation<double> _walletScale;
+
+  late Animation<double> _quickLinksFade;
+  late Animation<Offset> _quickLinksSlide;
+
+  late Animation<double> _transactionFade;
+  late Animation<Offset> _transactionSlide;
 
   @override
   void initState() {
     super.initState();
+    _initAnimations();
 
-    // // Trigger auto-refresh on first build
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   _refreshKey.currentState?.show();
-    // });
-    /// Silent refresh (no spinner)
-    Future.microtask(() async {
-      final walletController = Get.find<WalletController>();
-      final transactionController = Get.find<TransactionController>();
-      final profileController = Get.find<ProfileController>();
+    if (!_hasAnimated) {
+      // First time — play staggered entrance
+      _walletAnim.forward();
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) _quickLinksAnim.forward();
+      });
+      Future.delayed(const Duration(milliseconds: 450), () {
+        if (mounted) _transactionAnim.forward();
+      });
+      _hasAnimated = true;
+    } else {
+      // Already animated before — snap to end instantly
+      _walletAnim.value = 1.0;
+      _quickLinksAnim.value = 1.0;
+      _transactionAnim.value = 1.0;
+    }
 
+    // Only fetch data on first load
+    if (!_hasLoadedData) {
+      _hasLoadedData = true;
+      Future.microtask(() async {
+        final walletCtrl = Get.find<WalletController>();
+        final transactionCtrl = Get.find<TransactionController>();
+        final profileCtrl = Get.find<ProfileController>();
+
+        await Future.wait([
+          walletCtrl.fetchWalletBalance(),
+          transactionCtrl.fetchTransactions(forceRefresh: true),
+          profileCtrl.loadUserProfile(),
+        ]);
+      });
+    }
+  }
+
+  void _initAnimations() {
+    _walletAnim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 700));
+    _walletSlide = Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _walletAnim, curve: Curves.easeOutCubic));
+    _walletFade = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _walletAnim, curve: Curves.easeOut));
+    _walletScale = Tween<double>(begin: 0.92, end: 1.0)
+        .animate(CurvedAnimation(parent: _walletAnim, curve: Curves.easeOutBack));
+
+    _quickLinksAnim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _quickLinksFade = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _quickLinksAnim, curve: Curves.easeOut));
+    _quickLinksSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _quickLinksAnim, curve: Curves.easeOutCubic));
+
+    _transactionAnim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _transactionFade = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _transactionAnim, curve: Curves.easeOut));
+    _transactionSlide = Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _transactionAnim, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void dispose() {
+    _walletAnim.dispose();
+    _quickLinksAnim.dispose();
+    _transactionAnim.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    try {
       await Future.wait([
-        walletController.fetchWalletBalance(),
-        transactionController.fetchTransactions(forceRefresh: true),
-        profileController.loadUserProfile(),
+        Get.find<WalletController>().fetchWalletBalance(),
+        Get.find<TransactionController>().fetchTransactions(forceRefresh: true),
+        Get.find<ProfileController>().loadUserProfile(),
       ]);
-    });
+      if (_refreshKey.currentState?.mounted ?? false) {
+        Get.rawSnackbar(
+            message: 'Data refreshed successfully',
+            backgroundColor: Colors.green);
+      }
+    } catch (e) {
+      Get.rawSnackbar(
+          message: 'Refresh failed: $e', backgroundColor: Colors.red);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+
     final controller = Get.put(TUserController());
     final profileController = Get.find<ProfileController>();
     final walletController = Get.put(WalletController());
-    final transactionController = Get.put(TransactionController());
+    Get.put(TransactionController());
     final dark = THelperFunctions.isDarkMode(context);
 
     return Scaffold(
@@ -99,69 +164,77 @@ class _TsmatpayHomeScreenState extends State<TsmatpayHomeScreen> {
             Obx(() {
               final networkImage = controller.user.value.profilePicture;
               final image =
-              networkImage.isNotEmpty ? networkImage : TImages.smatpayuser;
+                  networkImage.isNotEmpty ? networkImage : TImages.smatpayuser;
               return controller.imageUploading.value
-                  ? const TShimmerEffect(
-                width: 80,
-                height: 80,
-                radius: 80,
-              )
+                  ? const TShimmerEffect(width: 80, height: 80, radius: 80)
                   : TCircularImage(
-                image: image,
-                width: 50,
-                height: 50,
-                isNetworkImage: networkImage.isNotEmpty,
-              );
+                      image: image,
+                      width: 50,
+                      height: 50,
+                      isNetworkImage: networkImage.isNotEmpty,
+                    );
             }),
-            const SizedBox(width: 8),
-            Text(
-              'Hi,',
-              style: TextStyle(
-                color: dark ? TColors.white : TColors.black,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Obx(() {
-              if (profileController.isLoading.value) {
-                return const TShimmerEffect(width: 80, height: 15);
-              } else {
-                return Text(
-                  profileController.firstName.value,
-                  style: TextStyle(
-                    color: dark ? TColors.white : TColors.black,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Welcome back',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: dark ? TColors.grey : TColors.darkerGrey,
+                        ),
                   ),
-                );
-              }
-            }),
-            const SizedBox(width: 8),
-            Image.asset(
-              TImages.wavehand,
-              width: 25,
-              height: 25,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Obx(() {
+                          if (profileController.isLoading.value) {
+                            return const TShimmerEffect(width: 80, height: 15);
+                          }
+                          return Text(
+                            profileController.firstName.value,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: dark ? TColors.white : TColors.black,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        }),
+                      ),
+                      const SizedBox(width: 6),
+                      Image.asset(TImages.wavehand, width: 22, height: 22),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(27),
-            child: GestureDetector(
-              onTap: () => Get.to(() => const TNotificationScreen()),
-              child: Container(
-                height: 30,
-                width: 30,
-                color: dark ? TColors.primary : TColors.secondary2,
-                child: Icon(
-                  Icons.notifications_none,
-                  size: 25,
-                  color: dark ? TColors.white : TColors.primary,
-                ),
+          GestureDetector(
+            onTap: () => Get.to(() => const TNotificationScreen()),
+            child: Container(
+              height: 38,
+              width: 38,
+              decoration: BoxDecoration(
+                color: dark ? TColors.primary2 : TColors.secondary2,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Iconsax.notification,
+                size: 22,
+                color: dark ? TColors.white : TColors.primary,
               ),
             ),
           ),
         ],
       ),
-
-      /// Pull-to-Refresh Wrapper
       body: RefreshIndicator(
         key: _refreshKey,
         onRefresh: _handleRefresh,
@@ -172,332 +245,443 @@ class _TsmatpayHomeScreenState extends State<TsmatpayHomeScreen> {
         triggerMode: RefreshIndicatorTriggerMode.anywhere,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              // --- Wallet Card ---
-              Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: TColors.primary,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        left: 200,
-                        child: Image.asset(
-                          TImages.cardvector,
-                          width: 150,
-                          height: 150,
-                          color: const Color.fromARGB(255, 110, 110, 249),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(18.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Wallet Balance',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium!
-                                      .apply(color: TColors.white),
-                                ),
-                                const SizedBox(width: 5),
-                                Obx(() => IconButton(
-                                  icon: Icon(
-                                    walletController.showBalance.value
-                                        ? Iconsax.eye
-                                        : Iconsax.eye_slash,
-                                    color: TColors.white,
-                                  ),
-                                  onPressed: walletController
-                                      .toggleBalanceVisibility,
-                                )),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Obx(() {
-                              if (walletController.isLoading.value) {
-                                return const TShimmerEffect(
-                                    width: 100, height: 20);
-                              }
-                              return Text(
-                                walletController.showBalance.value
-                                    ? '₦${walletController.balance.value.toStringAsFixed(2)}'
-                                    : '****',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall!
-                                    .copyWith(
-                                    color: TColors.white,
-                                    fontFamily: 'Roboto',
-                                    fontWeight: FontWeight.bold),
-                              );
-                            }),
-                            const SizedBox(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                GestureDetector(
-                                  onTap: () => Get.to(() => TAccountScreen()),
-                                  child: Container(
-                                    height: 40,
-                                    width: 140,
-                                    decoration: BoxDecoration(
-                                      color: TColors.white,
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Row(
-                                        children: [
-                                          Image.asset(
-                                            TImages.cardreceive,
-                                            color: TColors.primary,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Fund Wallet',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium!
-                                                .apply(color: TColors.primary),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () =>
-                                      Get.to(() => TWalletBalanceScreen()),
-                                  child: Container(
-                                    height: 40,
-                                    width: 140,
-                                    decoration: BoxDecoration(
-                                      color: TColors.white,
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Row(
-                                        children: [
-                                          Image.asset(
-                                            TImages.send,
-                                            color: TColors.primary,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Withdraw',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium!
-                                                .apply(color: TColors.primary),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                    ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+
+                // ─── Wallet Card ─────────────────────────────────
+                FadeTransition(
+                  opacity: _walletFade,
+                  child: SlideTransition(
+                    position: _walletSlide,
+                    child: ScaleTransition(
+                      scale: _walletScale,
+                      child:
+                          _buildWalletCard(context, walletController, dark),
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 10),
+                const SizedBox(height: 28),
 
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 30),
-                child: TSectionHeading(
-                  title: 'Quick Links',
-                  showActionButton: false,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // --- Quick Links ---
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Get.to(() => TAccountScreen()),
-                        child: const Column(
-                          children: [
-                            TCircularContainer(
-                              width: 70,
-                              height: 70,
-                              backgroundColor: TColors.secondary2,
-                              child: Icon(
-                                Icons.account_balance,
-                                color: TColors.primary,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            Text('Account')
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      GestureDetector(
-                        onTap: () => Get.to(() => const TBuyAirtimeScreen()),
-                        child: const Column(
-                          children: [
-                            TCircularContainer(
-                              width: 70,
-                              height: 70,
-                              backgroundColor: TColors.secondary2,
-                              child: Icon(
-                                Icons.phone_in_talk_sharp,
-                                color: TColors.primary,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            Text('Airtime')
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      GestureDetector(
-                        onTap: () => Get.to(() => TTestingSmeDataScreen()),
-                        child: const Column(
-                          children: [
-                            TCircularContainer(
-                              width: 70,
-                              height: 70,
-                              backgroundColor: TColors.secondary2,
-                              child: Icon(
-                                Icons.wifi_outlined,
-                                color: TColors.primary,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            Text('Data')
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      GestureDetector(
-                        onTap: () =>
-                            Get.to(() => const ElectricityPurchaseScreen()),
-                        child: const Column(
-                          children: [
-                            TCircularContainer(
-                              width: 70,
-                              height: 70,
-                              backgroundColor: TColors.secondary2,
-                              child: Icon(
-                                Icons.lightbulb,
-                                color: TColors.primary,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            Text('Electricity')
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // --- Transaction Section ---
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // ─── Quick Links ─────────────────────────────────
+                FadeTransition(
+                  opacity: _quickLinksFade,
+                  child: SlideTransition(
+                    position: _quickLinksSlide,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const TSectionHeading(
-                          title: 'Recent Transaction',
-                          showActionButton: false,
+                        Text(
+                          'Quick Links',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                        TextButton(
-                          onPressed: () => Get.to(
-                                  () => const FullTransactionScreen()),
-                          child: const Text('View All'),
-                        ),
+                        const SizedBox(height: 16),
+                        _buildQuickLinks(context, dark),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Obx(() {
-                      final controller = TransactionController.instance;
-
-                      if (controller.isLoading.value) {
-                        return const TShimmerEffect(
-                            width: double.infinity, height: 100);
-                      }
-
-                      if (controller.hasError.value) {
-                        return Column(
-                          children: [
-                            const Icon(Icons.error_outline,
-                                color: Colors.red, size: 50),
-                            Text('Failed to load transactions',
-                                style: Theme.of(context).textTheme.bodyMedium),
-                            ElevatedButton(
-                              onPressed: controller.fetchTransactions,
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        );
-                      }
-
-                      if (controller.transactions.isEmpty) {
-                        return Column(
-                          children: [
-                            Image.asset(TImages.notransaction,
-                                width: 150, height: 150),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No transactions found',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Column(
-                        children: [
-                          TransactionCard(
-                            transaction: controller.latestTransaction!,
-                            showFullDetails: false,
-                          ),
-                          if (controller.isLoading.value &&
-                              controller.transactions.isNotEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: CircularProgressIndicator(),
-                            ),
-                        ],
-                      );
-                    }),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 28),
+
+                // ─── Transactions ────────────────────────────────
+                FadeTransition(
+                  opacity: _transactionFade,
+                  child: SlideTransition(
+                    position: _transactionSlide,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // --- Promo Banner ---
+                        _buildPromoBanner(context, dark),
+                        const SizedBox(height: 28),
+
+                        // --- Pay Bills Row ---
+                        Text('Pay Bills',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 14),
+                        _buildBillsGrid(context, dark),
+                        const SizedBox(height: 28),
+
+                        // --- Recent Transactions ---
+                        _buildTransactionSection(context, dark),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  // ─── Wallet Card ───────────────────────────────────────────────
+  Widget _buildWalletCard(
+      BuildContext context, WalletController walletController, bool dark) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: TColors.primary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -10,
+            top: -10,
+            child: Image.asset(TImages.cardvector,
+                width: 160,
+                height: 160,
+                color: TColors.white.withValues(alpha: 0.08)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Wallet Balance',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: TColors.white.withValues(alpha: 0.8))),
+                    const SizedBox(width: 4),
+                    Obx(() => GestureDetector(
+                          onTap: walletController.toggleBalanceVisibility,
+                          child: Icon(
+                            walletController.showBalance.value
+                                ? Iconsax.eye
+                                : Iconsax.eye_slash,
+                            color: TColors.white.withValues(alpha: 0.8),
+                            size: 20,
+                          ),
+                        )),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Obx(() {
+                  if (walletController.isLoading.value) {
+                    return const TShimmerEffect(width: 120, height: 28);
+                  }
+                  return Text(
+                    walletController.showBalance.value
+                        ? '₦${walletController.balance.value.toStringAsFixed(2)}'
+                        : '₦ ****',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: TColors.white,
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.bold,
+                        ),
+                  );
+                }),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                        child: _walletBtn(context,
+                            icon: TImages.cardreceive,
+                            label: 'Fund Wallet',
+                            onTap: () => Get.to(() => TAccountScreen()))),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: _walletBtn(context,
+                            icon: TImages.send,
+                            label: 'Withdraw',
+                            onTap: () =>
+                                Get.to(() => TWalletBalanceScreen()))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _walletBtn(BuildContext context,
+      {required String icon,
+      required String label,
+      required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+            color: TColors.white, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(icon, width: 20, height: 20, color: TColors.primary),
+            const SizedBox(width: 8),
+            Text(label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: TColors.primary, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Quick Links ───────────────────────────────────────────────
+  Widget _buildQuickLinks(BuildContext context, bool dark) {
+    final links = [
+      _QuickLink('Account', Icons.account_balance,
+          () => Get.to(() => TAccountScreen())),
+      _QuickLink('Airtime', Icons.phone_in_talk_sharp,
+          () => Get.to(() => const TBuyAirtimeScreen())),
+      _QuickLink('Data', Icons.wifi_outlined,
+          () => Get.to(() => TTestingSmeDataScreen())),
+      _QuickLink('Electricity', Icons.lightbulb,
+          () => Get.to(() => const ElectricityPurchaseScreen())),
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: links.map((link) {
+        return GestureDetector(
+          onTap: link.onTap,
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: dark ? TColors.primary2 : TColors.secondary2,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(link.icon, color: TColors.primary, size: 26),
+              ),
+              const SizedBox(height: 8),
+              Text(link.label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(fontWeight: FontWeight.w500)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ─── Promo Banner ────────────────────────────────────────────
+  Widget _buildPromoBanner(BuildContext context, bool dark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            TColors.primary,
+            TColors.primary.withValues(alpha: 0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: TColors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('NEW',
+                      style: TextStyle(
+                          color: TColors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1)),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Refer & Earn Rewards',
+                  style: TextStyle(
+                      color: TColors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Invite friends and earn on every transaction they make',
+                  style: TextStyle(
+                      color: TColors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                      height: 1.4),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Image.asset(TImages.referalgift, width: 65, height: 65),
+        ],
+      ),
+    );
+  }
+
+  // ─── Bills Grid ────────────────────────────────────────────────
+  Widget _buildBillsGrid(BuildContext context, bool dark) {
+    final bills = [
+      _BillItem(Iconsax.monitor, 'Cable TV', 'DStv, GOtv'),
+      _BillItem(Iconsax.flash_1, 'Electricity', 'Prepaid'),
+      _BillItem(Iconsax.teacher, 'Education', 'WAEC, JAMB'),
+      _BillItem(Iconsax.gift, 'Gift Cards', 'Send gifts'),
+    ];
+
+    return Row(
+      children: bills.map((bill) {
+        return Expanded(
+          child: GestureDetector(
+            onTap: () {
+              if (bill.label == 'Cable TV') {
+                Get.toNamed('/cable-tv');
+              } else if (bill.label == 'Electricity') {
+                Get.to(() => const ElectricityPurchaseScreen());
+              }
+            },
+            child: Container(
+              margin: EdgeInsets.only(
+                  right: bill != bills.last ? 8 : 0),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: dark ? TColors.primary2 : TColors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: dark
+                          ? TColors.primary.withValues(alpha: 0.12)
+                          : TColors.secondary2,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child:
+                        Icon(bill.icon, size: 18, color: TColors.primary),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(bill.label,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(
+                              fontWeight: FontWeight.w600, fontSize: 11)),
+                  Text(bill.subtitle,
+                      style: TextStyle(
+                          fontSize: 9,
+                          color:
+                              dark ? TColors.darkGrey : TColors.darkerGrey)),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ─── Transactions ──────────────────────────────────────────────
+  Widget _buildTransactionSection(BuildContext context, bool dark) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Recent Transactions',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+            GestureDetector(
+              onTap: () => Get.to(() => const FullTransactionScreen()),
+              child: Text('View All',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: TColors.primary, fontWeight: FontWeight.w500)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Obx(() {
+          final c = TransactionController.instance;
+          if (c.isLoading.value) {
+            return const TShimmerEffect(width: double.infinity, height: 100);
+          }
+          if (c.hasError.value) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              decoration: BoxDecoration(
+                  color: dark ? TColors.primary2 : TColors.white,
+                  borderRadius: BorderRadius.circular(16)),
+              child: Column(children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                const SizedBox(height: 8),
+                Text('Failed to load transactions',
+                    style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                    onPressed: c.fetchTransactions,
+                    child: const Text('Retry')),
+              ]),
+            );
+          }
+          if (c.transactions.isEmpty) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              decoration: BoxDecoration(
+                  color: dark ? TColors.primary2 : TColors.white,
+                  borderRadius: BorderRadius.circular(16)),
+              child: Column(children: [
+                Image.asset(TImages.notransaction, width: 120, height: 120),
+                const SizedBox(height: 12),
+                Text('No transactions yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: dark ? TColors.grey : TColors.darkerGrey)),
+              ]),
+            );
+          }
+          return TransactionCard(
+              transaction: c.latestTransaction!, showFullDetails: false);
+        }),
+      ],
+    );
+  }
+}
+
+class _QuickLink {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _QuickLink(this.label, this.icon, this.onTap);
+}
+
+class _BillItem {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  const _BillItem(this.icon, this.label, this.subtitle);
 }

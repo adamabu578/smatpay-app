@@ -12,25 +12,37 @@ class SignupSuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
+      body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(TSizes.defaultSpace),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 100),
+              const Spacer(),
+
+              const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 110,
+              ),
+
               const SizedBox(height: TSizes.spaceBtwSections),
+
               Text(
                 'Account Created Successfully!',
+                textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
+
               const SizedBox(height: TSizes.spaceBtwItems),
+
               Text(
                 'Your account has been successfully created. You can now login.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-              const SizedBox(height: TSizes.spaceBtwSections),
+
+              const Spacer(),
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

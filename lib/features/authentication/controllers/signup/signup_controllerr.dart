@@ -26,6 +26,77 @@ class SignupController extends GetxController {
   // Loading State
   final isLoading = false.obs;
 
+  // Safely close any open dialog without triggering GetX snackbar internals
+  // The original implementation sometimes failed to dismiss the loading
+  // indicator before navigating, leaving a spinner overlay on top of the
+  // success screen ("it only loads").
+  void _safeCloseDialog() {
+    try {
+      // keep popping until there is no dialog left; Get.isDialogOpen can be
+      // unreliable when the route stack is changing.
+      while (Get.isDialogOpen ?? false) {
+        if (Get.overlayContext != null) {
+          Navigator.of(Get.overlayContext!).pop();
+        } else if (Get.context != null) {
+          Navigator.of(Get.context!).pop();
+        } else {
+          // fallback will pop the last route (dialog or page)
+          Get.back();
+        }
+      }
+    } catch (e) {
+      print('safeCloseDialog error: $e');
+    }
+  }
+
+  /// Show Success Popup
+  void _showSuccessPopup() {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 110,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Account Created Successfully!',
+                textAlign: TextAlign.center,
+                style: Theme.of(Get.context!).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Your account has been successfully created. You can now login.',
+                textAlign: TextAlign.center,
+                style: Theme.of(Get.context!).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.back(); // Close the dialog
+                    Get.offAll(() => TLoginScreen());
+                  },
+                  child: const Text('Continue to Login'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
   /// Signup Function
   Future<void> signup() async {
     if (!signupFormKey.currentState!.validate()) return;
@@ -48,13 +119,9 @@ class SignupController extends GetxController {
 
       // 🔹 Step 1: Create Virtual Account (if user checked the box)
       if (assignNuban.value) {
-        Get.dialog(
-          const Center(
-            child: CircularProgressIndicator(),
-          ),
-          barrierDismissible: false,
-        );
-
+        // `isLoading` is already true so the UI shows a spinner on the button.
+        // having an extra dialog caused problems where it wasn't dismissed
+        // before navigation, so we're dropping it entirely.
         print("Creating virtual account with Payscribe...");
 
         final nubanUrl = Uri.parse(APIConstants.virtualAccountEndpoint);
@@ -68,20 +135,41 @@ class SignupController extends GetxController {
           body: nubanBody,
         );
 
-        // Close loading dialog
-        Get.back();
+        // (no dialog to close)
 
         print("Virtual Account Response: ${nubanResponse.statusCode}");
         print("Virtual Account Body: ${nubanResponse.body}");
 
         if (nubanResponse.statusCode != 200) {
-          Get.snackbar(
-            'Error',
-            'Failed to create virtual account. Please try again later.',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
-          );
+          // handle unauthorized separately
+          if (nubanResponse.statusCode == 401) {
+            Get.snackbar(
+              'Error',
+              'Access denied when creating virtual account. Please check your API credentials.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.red,
+              colorText: Colors.white,
+            );
+          } else {
+            // if API returned a message, show it, otherwise generic
+            final body = nubanResponse.body;
+            String msg = 'Failed to create virtual account. Please try again later.';
+            try {
+              final json = jsonDecode(body);
+              if (json is Map && json['msg'] != null) {
+                msg = json['msg'];
+              }
+            } catch (_) {}
+
+            Get.snackbar(
+              'Error',
+              msg,
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.red,
+              colorText: Colors.white,
+            );
+          }
+
           isLoading.value = false;
           return; // Stop signup process
         }
@@ -108,12 +196,8 @@ class SignupController extends GetxController {
       }
 
       // 🔹 Step 2: Proceed with Signup
-      Get.dialog(
-        const Center(
-          child: CircularProgressIndicator(),
-        ),
-        barrierDismissible: false,
-      );
+      // we already show loading via `isLoading` in the form so the extra
+      // Get.dialog is unnecessary and was causing navigation to be obscured.
 
       final signupUrl = Uri.parse(APIConstants.signupEndpoint);
       final requestBody = {
@@ -122,7 +206,8 @@ class SignupController extends GetxController {
         "email": email.text.trim(),
         "phone": phoneNo.text.trim(),
         "password": password.text.trim(),
-        "assignNuban": assignNuban.value,
+        if (assignNuban.value)
+          "assignNuban": "yes", // ✅ string "yes" not boolean
         if (assignNuban.value) "nubanProvider": "payscribe",
         if (assignNuban.value) "virtualAccount": virtualAccountData,
       };
@@ -135,30 +220,32 @@ class SignupController extends GetxController {
         body: jsonEncode(requestBody),
       );
 
-      // Close loading dialog
-      Get.back();
+      // nothing to close; the form spinner will disappear when isLoading is
+      // set to false below
 
       print("Signup Response: ${response.statusCode}");
       print("Signup Body: ${response.body}");
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        Get.snackbar(
-          'Success',
-          'Account created successfully!',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          data['status'] == 'success') {
+        // close any remaining loading dialog _before_ routing. if a dialog
+        // stays open the user will just see the spinner and think the app is
+        // still loading.
+        _safeCloseDialog();
 
-        Get.offAll(() => SignupSuccessScreen(
-          onContinue: () => Get.offAll(() => TLoginScreen()),
-        ));
+        // reset loading flag before navigating; the controller may be disposed
+        // by Get.offAll and we don't want a stale observer stuck in 'true'.
+        isLoading.value = false;
+
+        // ✅ Show success popup instead of navigating to success page
+        _showSuccessPopup();
+        return; // exit early so finally block doesn't set loading again
       } else {
         Get.snackbar(
           'Error',
-          data['message'] ?? 'Signup failed',
+          data['msg'] ?? 'Signup failed',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -166,9 +253,8 @@ class SignupController extends GetxController {
         print("Signup Error Data: $data");
       }
     } catch (e) {
-      // Close any open dialog before showing error
-      if (Get.isDialogOpen ?? false) Get.back();
-
+      // close any dialog that might still be open
+      _safeCloseDialog();
       print("Signup Exception: $e");
       Get.snackbar(
         'Error',
@@ -181,7 +267,6 @@ class SignupController extends GetxController {
       isLoading.value = false;
     }
   }
-
 
   @override
   void onClose() {
